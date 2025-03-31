@@ -11,6 +11,7 @@ body {
   color: #eee;
   opacity: 0;
   animation: fadeIn 1s ease-in-out forwards;
+  overflow-x: hidden;
 }
 
 ::-webkit-scrollbar {
@@ -74,12 +75,13 @@ input:focus {
 button {
   padding: 5px;
   border-radius: 5px;
+  color: #eee;
 }
 button:hover {
   background: #88aaff;
 }
 
-h1, h2, h3, h4 {
+h1, h2, h3, h4, button {
   font-family: 'papyrus', 'Papyrus', 'Garamond', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
 }
 h1, h2, h3 {
@@ -115,6 +117,11 @@ h1, h2, h3 {
   height: 100%;
 }
 
+#articles {
+  display: flex;
+  flex-direction: row;
+}
+
 .hierarchy {
   position: absolute;
   left: -75px;
@@ -137,6 +144,73 @@ h1, h2, h3 {
 }
 .hflex > * {
   width: 100%;
+}
+
+.y {
+  transition: filter 150ms ease-in-out;
+}
+.y:hover {
+  filter: invert(90%) sepia(100%) saturate(500%) hue-rotate(-30deg);
+}
+.y::selection {
+  filter: invert(90%) sepia(100%) saturate(1000%) hue-rotate(-30deg);
+}
+
+.v {
+  display: flex;
+  flex-direction: column;
+  vertical-align: middle;
+  align-items: center;
+}
+
+#content {
+  position: absolute;
+  left: 225px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-grow: 1;
+  justify-content: center;
+  align-items: center;
+}
+#nas {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  width: calc(min(100%, 300px));
+}
+#nas > * {
+  width: 100%;
+}
+#nas h1 {
+  transition: filter 690ms ease-in-out;
+  filter: drop-shadow(0 0.2em 2em #ffa600);
+  font-synthesis-weight: auto;
+  font-size: 3rem;
+  font-weight: 1000;
+}
+#nas h1::before {
+  content: attr(data-text);
+  position: absolute;
+  -webkit-text-stroke: #000 7px;
+}
+#nas h1::after {
+  content: attr(data-text);
+  position: absolute;
+  transform: translate(-100%, 0%);
+}
+#nas h1:hover {
+  filter: drop-shadow(0 0.2em 2em #ffa600) drop-shadow(0 0 5em #ffa600);
+}
+#nas img {
+  min-width: 150%;
+  transition: filter 400ms ease-in-out;
+  filter: drop-shadow(0 1em 2em #000);
+}
+#nas img:hover {
+  filter: drop-shadow(0 0 0.5em #00ff69) drop-shadow(0 1em 2em #000);
 }
 
 #menus {
@@ -262,6 +336,10 @@ ol.nav > hr {
   border: none;
   cursor: pointer;
 }
+.ibtn {
+  font-size: 0.6rem;
+  letter-spacing: -0.08em;
+}
 
 @media only screen and (max-width: 650px), (orientation: portrait) {
   ol.nav {
@@ -287,6 +365,7 @@ ol.nav > hr {
 
   .page {
     left: 0px;
+    top: 45px;
   }
 }
 
