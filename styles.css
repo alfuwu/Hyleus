@@ -64,9 +64,19 @@ input {
   color: #eee;
   border: transparent;
   border-bottom: 3px solid rgba(255, 223, 186, 0.2);
+  padding: 3px;
+  border-radius: 5px;
 }
 input:focus {
   outline: none;
+}
+
+button {
+  padding: 5px;
+  border-radius: 5px;
+}
+button:hover {
+  background: #88aaff;
 }
 
 h1, h2, h3, h4 {
@@ -79,6 +89,9 @@ h1, h2, h3 {
 
 .inv {
   filter: invert(90%);
+}
+.inv2 {
+  filter: invert(70%);
 }
 .ico {
   max-width: 30px;
@@ -113,6 +126,79 @@ h1, h2, h3 {
   overflow-x: hidden;
   overflow-y: auto;
   flex: 0 0 140px;
+}
+.hflex {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  flex-grow: 1;
+  width: 100%;
+}
+.hflex > * {
+  width: 100%;
+}
+
+#menus {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  pointer-events: visible;
+}
+#f {
+  background: #000;
+  opacity: 0.5;
+  position: absolute;
+  left: -75px;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  z-index: 11;
+}
+.menu {
+  display: flex;
+  width: fit-content;
+  justify-content: center;
+  flex-direction: column;
+  background: #141314;
+  opacity: 1;
+  border-radius: 5px;
+  z-index: 12;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 1);
+}
+#admin-menu {
+  padding: 30px 70px;
+}
+#search-menu {
+  padding: 30px 20px;
+  width: 40em;
+}
+#search-menu input {
+  width: calc(100% - 31px);
+}
+#search-menu > .scroll {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+#search-menu hr {
+  width: 90%;
+  margin-top: 15px;
+}
+#search-menu ol {
+  list-style: none;
+}
+
+#a {
+  margin-bottom: 15px;
+  font-size: 20px;
+  padding: 5px;
+}
+
+.hidden {
+  display: none !important;
+}
+.h {
+  opacity: 0 !important;
 }
 
 ol.nav {
@@ -167,6 +253,16 @@ ol.nav > hr {
   color: #fff;
 }
 
+.nav button,
+.nav button:hover,
+.ibtn,
+.ibtn:hover {
+  background: transparent;
+  outline: none;
+  border: none;
+  cursor: pointer;
+}
+
 @media only screen and (max-width: 650px), (orientation: portrait) {
   ol.nav {
     overflow-x: auto;
@@ -188,14 +284,9 @@ ol.nav > hr {
   .nav a {
     padding: 0.2rem 0.75rem;
   }
-  
-  .page-viewport {
-    margin-left: 0px;
-    margin-top: 45px;
-  }
 
-  .page-viewport > li {
-    padding: 10px 10px;
+  .page {
+    left: 0px;
   }
 }
 

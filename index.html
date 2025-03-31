@@ -7,7 +7,7 @@
 
 Within are several declassified excerpts detailing important peoples, events, kingdoms, the soul, and the laws of magic present within Hyleus.
 
-Withal, there are many still-classified excerpts and first-hand accounts contained within the Hyleus project not available for public perusal." property="og:description">
+There are also classified excerpts and first-hand accounts contained within the Hyleus project not available for public perusal." property="og:description">
     <meta content="https://alfuwu.github.io/Hyleus/" property="og:url">
     <meta content="https://alfuwu.github.io/Images/newhyleusoutlined.png" property="og:image">
     <meta content="#FFAAAA" data-react-helmet="true" name="theme-color">
@@ -20,7 +20,11 @@ Withal, there are many still-classified excerpts and first-hand accounts contain
 <body>
     <div class="page-wrapper">
     <ol class="nav">
-        <li><a href=""><img src="search.svg" class="inv ico"></a></li>
+        <li><button id="sbtn"><img src="search.svg" class="inv ico"></button></li>
+        <hr>
+        <li><button class="hidden" name="adm" id="create"><img src="create.svg" class="inv ico"></button></li>
+        <li><button class="hidden" name="adm" id="save"><img src="save.svg" class="inv ico"></button></li>
+        <li><button id="abtn"><img src="lock.svg" class="inv ico"></button></li>
     </ol>
     <div class="page" id="articles">
         <div class="hierarchy">
@@ -29,12 +33,38 @@ Withal, there are many still-classified excerpts and first-hand accounts contain
                 <img src="search.svg" class="inv ico smol">
             </div>
             <div class="hflex">
-                <a href=""><img src="" alt="Articles"></a>
-                <a href=""><img src="" alt="Generic"></a>
-                <a href=""><img src="" alt="Maps"></a>
+                <button class="ibtn"><img src="articles.svg" class="inv2 ico" alt="Articles"></button>
+                <button class="ibtn"><img src="type.svg" class="inv2 ico" alt="By Type"></button>
+                <button class="ibtn"><img src="maps.svg" class="inv2 ico" alt="Maps"></button>
             </div>
             <p id="search-text"></p>
             <hr>
+        </div>
+    </div>
+    <div class="page hidden" id="menus">
+        <div class="h" id="f"></div>
+        <div class="menu hidden h" id="search-menu">
+            <div>
+                <input type="text" placeholder="Search Hyleus..." id="search2">
+                <img src="search.svg" class="inv ico smol">
+            </div>
+            <hr>
+            <div class="scroll">
+                <h4>ARTICLES</h4>
+                <ol id="articles-list"></ol>
+                <h4>CATEGORIES</h4>
+                <ol id="categories-list"></ol>
+            </div>
+        </div>
+        <div class="menu hidden h" id="admin-menu">
+            <h1>ADMIN LOGIN</h1>
+            <input type="password" placeholder="" id="a">
+            <button id="al">Login</button>
+        </div>
+        <div class="menu hidden h" id="save-menu">
+            <h1>SAVE</h1>
+            <input type="password" placeholder="" id="a">
+            <button id="al">Login</button>
         </div>
     </div>
     </div>

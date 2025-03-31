@@ -1,6 +1,17 @@
+// spicy!
 const A = "zKMTNa/piUlaWk17gdf84QpnNDA2lDEuJ2BpAxlzT029+zn5k55nkLOKGkoi6XzrLI4UaCv7DhC4fYhA9f0inC0s8Nk22okLJXhjSXOjHzuvmZwqBRN1l9wFiPuYIDfPWUtZfBzj0E0cCeN1DI+whTQfwdsNCTFlmj9C8hRUTZBE8sy7RDbwnIU=";
 const S = document.getElementById("search");
 const Z = document.getElementById("search-text");
+const C = document.getElementById("sbtn");
+const L = document.getElementById("abtn");
+const M = document.getElementById("menus");
+const K = document.getElementById("search-menu");
+const J = document.getElementById("admin-menu");
+const P = document.getElementById("a");
+const U = document.getElementById("al");
+const F = document.getElementById("f");
+
+let a = null;
 
 function compress(plainTextArray) {
     try {
@@ -107,6 +118,83 @@ async function encrypt(plaintext, password, compresss=false) {
     return btoa(String.fromCharCode(...e));
 }
 
+function opacitate(ele, startOpac, endOpac) {
+    ele.animate([
+        { opacity: startOpac },
+        { opacity: endOpac }
+    ], {
+        duration: 200,
+        fill: "forwards",
+        easing: "ease-in-out"
+    })
+}
+
 S.addEventListener("input", _ => {
     Z.innerText = S.value ? "SEARCH FOR \"" + S.value.toUpperCase() + "\"" : "";
 });
+
+C.addEventListener("click", event => {
+    if (event.button === 0) {
+        M.classList.remove("hidden");
+        F.classList.remove("h");
+        K.classList.remove("hidden", "h");
+        opacitate(F, 0, 0.5);
+        opacitate(K, 0, 1);
+    }
+});
+
+L.addEventListener("click", event => {
+    if (event.button === 0) {
+        if (a !== null) {
+            a = null;
+            document.getElementsByName("adm").forEach(ele => ele.classList.add("hidden"));
+            localStorage.removeItem("hyleus-admin");
+        } else {
+            M.classList.remove("hidden");
+            F.classList.remove("h");
+            J.classList.remove("hidden", 'h');
+            opacitate(F, 0, 0.5);
+            opacitate(J, 0, 1);
+        }
+    }
+});
+
+F.addEventListener("click", event => {
+    if (event.button === 0)
+        closeMenus();
+})
+
+function closeMenus() {
+    opacitate(F, 0.5, 0);
+    opacitate(K, 1, 0);
+    opacitate(J, 1, 0);
+    setTimeout(() => {
+        M.classList.add("hidden");
+        F.classList.add("h");
+        K.classList.add("hidden", "h");
+        J.classList.add("hidden", "h");
+    }, 200);
+    //P.value = "";
+}
+
+function anonymous(txt, close=true) {
+    decrypt(txt, "").then(decrypted => {
+        if (decrypted) {
+            console.log("WELCOME, ADMIN");
+            a = decrypted;
+            localStorage.setItem("hyleus-admin", txt);
+            document.getElementsByName("adm").forEach(ele => ele.classList.remove("hidden"));
+            if (close)
+                closeMenus();
+        } else if (localStorage.getItem("hyleus-admin") === txt) {
+            localStorage.removeItem("hyleus-admin");
+        }
+    });
+}
+
+P.addEventListener("keyup", event => { if (event.key === "Enter") anonymous(P.value) });
+U.addEventListener("click", event => { if (event.button === 0) anonymous(P.value) });
+
+const dat = localStorage.getItem("hyleus-admin");
+if (dat !== null)
+    anonymous(dat);
