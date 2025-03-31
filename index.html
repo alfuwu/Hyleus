@@ -12,7 +12,7 @@ There are also classified excerpts and first-hand accounts contained within the 
     <meta content="https://alfuwu.github.io/Images/newhyleusoutlined.png" property="og:image">
     <meta content="#FFAAAA" data-react-helmet="true" name="theme-color">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Hyleus</title>
+    <title>Project: Hyleus</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="icon" type="image/svg+xml" href="https://alfuwu.github.io/Images/newhyleusoutlined.svg">
     <script type="text/javascript" src="pako.js"></script>
@@ -22,8 +22,8 @@ There are also classified excerpts and first-hand accounts contained within the 
     <ol class="nav">
         <li><button id="sbtn"><img src="search.svg" class="inv ico"></button></li>
         <hr>
-        <li><button class="hidden" name="adm" id="create"><img src="create.svg" class="inv ico"></button></li>
-        <li><button class="hidden" name="adm" id="save"><img src="save.svg" class="inv ico"></button></li>
+        <li><button class="hidden" name="adm" id="cbtn"><img src="create.svg" class="inv ico"></button></li>
+        <li><button class="hidden" name="adm" id="vbtn"><img src="save.svg" class="inv ico"></button></li>
         <li><button id="abtn"><img src="lock.svg" class="inv ico"></button></li>
     </ol>
     <div class="page" id="articles">
@@ -39,12 +39,16 @@ There are also classified excerpts and first-hand accounts contained within the 
             </div>
             <p id="search-text"></p>
             <hr>
+            <ol></ol>
         </div>
         <div id="content">
             <div id="nas">
                 <h1 data-text="HYLEUS">HYLEUS</h1>
                 <hr>
                 <img src="https://alfuwu.github.io/Images/newhyleus.svg">
+            </div>
+            <div id="create-form">
+                
             </div>
         </div>
     </div>
@@ -71,7 +75,7 @@ There are also classified excerpts and first-hand accounts contained within the 
         <div class="menu hidden h" id="save-menu">
             <h1>SAVE</h1>
             <input type="text" placeholder="Commit message" id="s">
-            <button id="save">save</button>
+            <button id="save">Save</button>
         </div>
     </div>
     </div>

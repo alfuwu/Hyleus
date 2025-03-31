@@ -3,15 +3,28 @@ const A = "zKMTNa/piUlaWk17gdf84QpnNDA2lDEuJ2BpAxlzT029+zn5k55nkLOKGkoi6XzrLI4Ua
 const S = document.getElementById("search");
 const Z = document.getElementById("search-text");
 const C = document.getElementById("sbtn");
+const E = document.getElementById("cbtn");
+const V = document.getElementById("vbtn");
 const L = document.getElementById("abtn");
 const M = document.getElementById("menus");
 const K = document.getElementById("search-menu");
 const J = document.getElementById("admin-menu");
+const G = document.getElementById("save-menu");
 const P = document.getElementById("a");
 const U = document.getElementById("al");
 const F = document.getElementById("f");
+const R = document.getElementById("content");
+const N = document.getElementById("nas");
+const Y = document.getElementById("save");
+const O = document.getElementById("s");
+const Q = []; // {name: "Text", parent: null/parent uuid4, id: uuid4, description: "Markdown text", position: number}
+const W = [{title: "Test", category: null, content: "Test text", password: null, salt: null, key: null, iv: null, position: 1}]; // {title: "Text", category: null/category uuid4, content: "Markdown text", password: null/"password", salt: Uint8Array, key: CryptoKey, iv: Uint8Array, encrypted: true/null, position: number}
+
+const MENUS = [[K, C], [J, L], [G, V]]
 
 let a = null;
+let b = true;
+Y.ariaDisabled = !b;
 
 function compress(plainTextArray) {
     try {
@@ -73,7 +86,27 @@ async function decrypt(encryptedData, password=null, compressed=false) {
     }
 }
 
-async function encrypt(plaintext, password, compresss=false) {
+async function baseEncrypt(encoded, salt, key, iv, compresss=false, raw=false) {
+    const ciphertext = await crypto.subtle.encrypt(
+        {
+            name: "AES-GCM",
+            iv: iv,
+            tagLength: 128
+        },
+        key,
+        compresss ? compress(encoded) : encoded
+    );
+    const cipherArray = new Uint8Array(ciphertext);
+    const tag = cipherArray.slice(-16);
+    const e = new Uint8Array(salt.length + iv.length + tag.length + cipherArray.length - 16);
+    e.set(salt);
+    e.set(iv, salt.length);
+    e.set(tag, salt.length + iv.length);
+    e.set(cipherArray.slice(0, cipherArray.length - 16), salt.length + iv.length + tag.length);
+    return raw ? e : btoa(String.fromCharCode(...e));
+}
+
+async function encrypt(plaintext, password, compresss=false, raw=false) {
     const encoder = new TextEncoder();
     const encryptedData = encoder.encode(password);
     const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -98,24 +131,107 @@ async function encrypt(plaintext, password, compresss=false) {
         ["encrypt", "decrypt"]
     );
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encoded = encoder.encode(plaintext);
-    const ciphertext = await crypto.subtle.encrypt(
-        {
-            name: "AES-GCM",
-            iv: iv,
-            tagLength: 128
-        },
-        derivedKey,
-        compresss ? compress(encoded) : encoded
-    );
-    const cipherArray = new Uint8Array(ciphertext);
-    const tag = cipherArray.slice(-16);
-    const e = new Uint8Array(salt.length + iv.length + tag.length + cipherArray.length - 16);
-    e.set(salt);
-    e.set(iv, salt.length);
-    e.set(tag, salt.length + iv.length);
-    e.set(cipherArray.slice(0, cipherArray.length - 16), salt.length + iv.length + tag.length);
-    return btoa(String.fromCharCode(...e));
+    return baseEncrypt(encoder.encode(plaintext), salt, derivedKey, iv, compresss, raw);
+}
+
+async function encodeAndEncrypt(content, password, salt, key, iv, encrypted) {
+    let data = new TextEncoder().encode(content);
+
+    if (!encrypted) {
+        if (salt && key && iv) {
+            data = await baseEncrypt(data, salt, key, iv, true, true);
+        } else if (password) {
+            data = await encrypt(content, password, true, true);
+        }
+    }
+
+    return compress(data);
+}
+
+function buildCategoryStructure(Q) {
+    const categories = {};
+    Q.forEach(({ id, name, parent, description }) => {
+        categories[id] = { name, parent, description, path: category.parent ? null : `data/${name}` };
+    });
+    Object.values(categories).forEach(category => {
+        if (category.parent)
+            category.path = `${categories[category.parent].path}/${category.name}`;
+    });
+    return categories;
+}
+
+async function processData(W, categories) {
+    const files = {};
+    for (const item of W) {
+        const categoryPath = item.category ? categories[item.category]?.path : 'data';
+        const filePath = `${categoryPath}/${item.title}.hyl`;
+        files[filePath] = await encodeAndEncrypt(item.content, item.password, item.salt, item.key, item.iv, item.encrypted);
+    }
+    return files;
+}
+
+async function processCategories(categories) {
+    const files = {};
+    for (const id in categories) {
+        const category = categories[id];
+        const filePath = `${category.path}/.category`;
+        const data = new TextEncoder().encode(category.description || '');
+        files[filePath] = compress(data);
+    }
+    return files;
+}
+
+async function getLatestCommitSHA(repo) {
+    const response = await fetch(`https://api.github.com/repos/${repo}/git/refs/heads/master`, {
+        headers: { 'Authorization': `token ${a}` }
+    });
+    const data = await response.json();
+    return data.object.sha;
+}
+
+async function getTree(repo, baseTreeSHA, files) {
+    const tree = [];
+    for (const path in files) {
+        tree.push({
+            path,
+            mode: "100644",
+            type: "blob",
+            content: btoa(String.fromCharCode(...new Uint8Array(files[path])))
+        });
+    }
+    const response = await fetch(`https://api.github.com/repos/${repo}/git/trees`, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base_tree: baseTreeSHA, tree })
+    });
+    const data = await response.json();
+    return data.sha;
+}
+
+async function createCommit(repo, parentSHA, treeSHA) {
+    const response = await fetch(`https://api.github.com/repos/${repo}/git/commits`, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: O.value || "Update [no info provided]", tree: treeSHA, parents: [parentSHA] })
+    });
+    const data = await response.json();
+    return data.sha;
+}
+
+async function updateBranch(repo, commitSHA) {
+    await fetch(`https://api.github.com/repos/${repo}/git/refs/heads/master`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sha: commitSHA })
+    });
+}
+
+async function commitToGitHub(files, token) {
+    const repo = 'alfuwu/Hyleus';
+    const latestCommitSHA = await getLatestCommitSHA(repo, token);
+    const treeSHA = await getTree(repo, token, latestCommitSHA, files);
+    const commitSHA = await createCommit(repo, token, latestCommitSHA, treeSHA);
+    await updateBranch(repo, token, commitSHA);
 }
 
 function opacitate(ele, startOpac, endOpac) {
@@ -129,19 +245,21 @@ function opacitate(ele, startOpac, endOpac) {
     })
 }
 
-S.addEventListener("input", _ => {
+S.addEventListener("input", () => {
     Z.innerText = S.value ? "SEARCH FOR \"" + S.value.toUpperCase() + "\"" : "";
 });
 
-C.addEventListener("click", event => {
-    if (event.button === 0) {
-        M.classList.remove("hidden");
-        F.classList.remove("h");
-        K.classList.remove("hidden", "h");
-        opacitate(F, 0, 0.5);
-        opacitate(K, 0, 1);
-    }
-});
+for (const m of MENUS)
+    if (m[1] !== L)
+        m[1].addEventListener("click", event => {
+            if (event.button === 0) {
+                M.classList.remove("hidden");
+                F.classList.remove("h");
+                m[0].classList.remove("hidden", "h");
+                opacitate(F, 0, 0.5);
+                opacitate(m[0], 0, 1);
+            }
+        });
 
 L.addEventListener("click", event => {
     if (event.button === 0) {
@@ -166,15 +284,15 @@ F.addEventListener("click", event => {
 
 function closeMenus() {
     opacitate(F, 0.5, 0);
-    opacitate(K, 1, 0);
-    opacitate(J, 1, 0);
+    for (const m of MENUS)
+        opacitate(m[0], 1, 0);
     setTimeout(() => {
         M.classList.add("hidden");
         F.classList.add("h");
-        K.classList.add("hidden", "h");
-        J.classList.add("hidden", "h");
+        for (const m of MENUS)
+            m[0].classList.add("hidden", "h");
     }, 200);
-    //P.value = "";
+    P.value = "";
 }
 
 function anonymous(txt, close=true) {
@@ -192,9 +310,39 @@ function anonymous(txt, close=true) {
     });
 }
 
+async function anonymous2() {
+    if (a && b) {
+        const categories = buildCategoryStructure(Q);
+        const files = { ...await processData(W, categories), ...await processCategories(categories) };
+        const repo = 'alfuwu/Hyleus';
+        for (const path in files) {
+            const content = btoa(String.fromCharCode(...new Uint8Array(files[path])));
+            await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: O.value || "Update [no info provided]", content })
+            });
+        }
+        //await commitToGitHub(files, a);
+        console.log("COMMITED");
+    }
+}
+
 P.addEventListener("keyup", event => { if (event.key === "Enter") anonymous(P.value) });
 U.addEventListener("click", event => { if (event.button === 0) anonymous(P.value) });
+
+O.addEventListener("keyup", event => { if (event.key === "Enter") anonymous2()})
+Y.addEventListener("click", event => { if (event.button === 0) anonymous2() })
+const raw = "https://alfuwu.github.io/Hyleus/data/Test.hyl"
 
 const dat = localStorage.getItem("hyleus-admin");
 if (dat !== null)
     anonymous(dat);
+
+
+(async () => {
+    let dat = await fetch(raw, {
+        method: `GET`
+    });
+    console.log(new TextDecoder().decode(decompress(await dat.arrayBuffer())));
+})();

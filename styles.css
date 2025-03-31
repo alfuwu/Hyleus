@@ -76,6 +76,7 @@ button {
   padding: 5px;
   border-radius: 5px;
   color: #eee;
+  background: #888899;
 }
 button:hover {
   background: #88aaff;
@@ -133,6 +134,9 @@ h1, h2, h3 {
   overflow-x: hidden;
   overflow-y: auto;
   flex: 0 0 140px;
+}
+.hierarchy > ol {
+  list-style: none;
 }
 .hflex {
   display: flex;
@@ -239,8 +243,6 @@ h1, h2, h3 {
   border-radius: 5px;
   z-index: 12;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 1);
-}
-#admin-menu {
   padding: 30px 70px;
 }
 #search-menu {
@@ -262,7 +264,7 @@ h1, h2, h3 {
   list-style: none;
 }
 
-#a {
+#a, #s {
   margin-bottom: 15px;
   font-size: 20px;
   padding: 5px;
