@@ -105,6 +105,7 @@ h1, h2, h3 {
 .hierarchy {
   height: 100%;
   position: absolute;
+  left: -75px;
   width: fit-content;
   padding: 5px 15px 5px 90px;
   background: #131314;
