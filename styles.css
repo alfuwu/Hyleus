@@ -1,0 +1,215 @@
+html {
+  scroll-behavior: smooth;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: rgb(25,24,25);
+  color: #eee;
+  opacity: 0;
+  animation: fadeIn 1s ease-in-out forwards;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+  /*border: 3px solid transparent;
+  background-clip: content-box;*/
+}
+::-webkit-scrollbar-thumb {
+  background: #666;
+  border-top: 20px;
+  border-radius: 15px;
+  filter: drop-shadow(0 0 2em #000);
+}
+::-webkit-scrollbar-thumb:hover{
+  background: #555;
+}
+
+a {
+  font-family: 'papyrus', 'Papyrus', 'Garamond', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  position: relative;
+  text-decoration: none;
+  color: #eee;
+  font-weight: bold;
+  display: inline-block;
+  outline: none;
+}
+a::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  color: #fff5dd;
+  text-shadow: 0 0 8px rgba(255, 215, 0, 0.8);
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 320ms ease-in-out;
+}
+a::after {
+  width: fit-content;
+  width: calc-size(fit-content, size + 2px);
+}
+a:hover::after {
+  clip-path: inset(-100% -100% -100% -100%);
+}
+
+input {
+  background: #111;
+  color: #eee;
+  border: transparent;
+  border-bottom: 3px solid rgba(255, 223, 186, 0.2);
+}
+input:focus {
+  outline: none;
+}
+
+h1, h2, h3, h4 {
+  font-family: 'papyrus', 'Papyrus', 'Garamond', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+}
+h1, h2, h3 {
+  text-align: center;
+  scroll-margin-top: 4rem;
+}
+
+.inv {
+  filter: invert(90%);
+}
+.ico {
+  max-width: 30px;
+  vertical-align: middle;
+  padding: 10px 0;
+}
+.smol {
+  max-width: 20px;
+  padding: 6.666px 0;
+}
+
+.page-wrapper {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+.page {
+  position: absolute;
+  left: 75px;
+  width: 100%;
+  height: 100%;
+}
+
+.hierarchy {
+  height: 100%;
+  position: absolute;
+  width: fit-content;
+  padding: 5px 15px 5px 90px;
+  background: #131314;
+  overflow-x: hidden;
+  overflow-y: auto;
+  flex: 0 0 140px;
+}
+
+ol.nav {
+  flex: 0 0 140px;
+  font-family: 'papyrus', 'Papyrus', 'Garamond', Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  list-style: none;
+  margin: 25px -15px 5px 5px;
+  padding: 1vh 0 0 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: fixed;
+  height: 100vh;
+  z-index: 10;
+  background: linear-gradient(180deg, #2b1a1a, #3a2a2a);
+  border-right: 3px solid rgba(255, 223, 186, 0.2);
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5);
+}
+
+ol.nav > li {
+  padding: 0 0.5rem;
+  margin: 3px 7px;
+  border-radius: 6px;
+  transition: box-shadow 200ms ease-in-out, transform 200ms ease-in-out, color 200ms ease-in-out;
+}
+
+ol.nav > hr {
+  margin: 7px 7px;
+}
+
+.nav a {
+  display: block;
+  text-align: center;
+  text-decoration: none;
+  color: #eee;
+  font-weight: bold;
+  /*padding: 0.5rem;*/
+  border-radius: 6px;
+  transition: color 200ms ease-in-out;
+}
+
+.nav a:hover {
+  text-decoration: none;
+  box-shadow: none;
+  color: #fff;
+}
+
+.nav > li:hover {
+  text-decoration: none;
+  box-shadow: 0 0 10px rgba(255, 223, 186, 0.4);
+  transform: scale(1.05);
+  color: #fff;
+}
+
+@media only screen and (max-width: 650px), (orientation: portrait) {
+  ol.nav {
+    overflow-x: auto;
+    overflow-y: hidden;
+    width: 100%;
+    display: flex;
+    height: unset;
+    margin: 0;
+    padding: 0.5rem 0;
+    border-bottom: 3px solid rgba(255, 223, 186, 0.2);
+    border-right: none;
+  }
+  
+  .nav li {
+    flex: 1 0 auto;
+    margin: 0 5px;
+  }
+
+  .nav a {
+    padding: 0.2rem 0.75rem;
+  }
+  
+  .page-viewport {
+    margin-left: 0px;
+    margin-top: 45px;
+  }
+
+  .page-viewport > li {
+    padding: 10px 10px;
+  }
+}
+
+@font-face{
+  font-family:'papyrus';
+  src: url('https://alfuwu.github.io/Images/papyrus.woff') format('woff'),
+    url('https://alfuwu.github.io/Images/papyrus.ttf') format('truetype');
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-1px); }
+  100% { transform: translateY(0px); }
+}
