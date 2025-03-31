@@ -98,16 +98,17 @@ h1, h2, h3 {
 .page {
   position: absolute;
   left: 75px;
-  width: 100%;
+  right: 0px;
   height: 100%;
 }
 
 .hierarchy {
-  height: 100%;
   position: absolute;
   left: -75px;
   width: fit-content;
   padding: 5px 15px 5px 90px;
+  top: 0px;
+  bottom: 0px;
   background: #131314;
   overflow-x: hidden;
   overflow-y: auto;
