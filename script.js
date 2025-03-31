@@ -17,8 +17,8 @@ const R = document.getElementById("content");
 const N = document.getElementById("nas");
 const Y = document.getElementById("save");
 const O = document.getElementById("s");
-const Q = []; // {name: "Text", parent: null/parent uuid4, id: uuid4, description: "Markdown text", position: number}
-const W = [{title: "Test", category: null, content: "Test text", password: null, salt: null, key: null, iv: null, position: 1}]; // {title: "Text", category: null/category uuid4, content: "Markdown text", password: null/"password", salt: Uint8Array, key: CryptoKey, iv: Uint8Array, encrypted: true/null, position: number}
+const Q = [{id: generateUuid(), name: "Magic", description: "Test description", position: 1}]; // {id: uuid4, name: "Text", parent: null/parent uuid4, description: "Markdown text", position: number}
+const W = []; //[{title: "Test", category: null, content: "Test text", tags: [], position: 1}]; // {title: "Text", category: null/category uuid4, content: "Markdown text", password: null/"password", salt: Uint8Array, key: CryptoKey, iv: Uint8Array, encrypted: true/null, position: number}
 
 const MENUS = [[K, C], [J, L], [G, V]]
 
@@ -134,24 +134,27 @@ async function encrypt(plaintext, password, compresss=false, raw=false) {
     return baseEncrypt(encoder.encode(plaintext), salt, derivedKey, iv, compresss, raw);
 }
 
-async function encodeAndEncrypt(content, password, salt, key, iv, encrypted) {
+async function encodeAndEncrypt(content, category, password, salt, key, iv, encrypted, position) {
     let data = new TextEncoder().encode(content);
 
-    if (!encrypted) {
-        if (salt && key && iv) {
+    if (!encrypted)
+        if (salt && key && iv)
             data = await baseEncrypt(data, salt, key, iv, true, true);
-        } else if (password) {
+        else if (password)
             data = await encrypt(content, password, true, true);
-        }
-    }
 
-    return compress(data);
+    const buffer = new ArrayBuffer(21);
+    const view = new DataView(buffer);
+    new Uint8Array(buffer, 0, 16).set(uuidToBinary(category));
+    view.setUint32(16, position, true);
+    view.setUint8(20, encrypted || salt && key && iv || password ? 1 : 0);
+    return compress(concatenate(new Uint8Array(buffer), data));
 }
 
 function buildCategoryStructure(Q) {
     const categories = {};
-    Q.forEach(({ id, name, parent, description }) => {
-        categories[id] = { name, parent, description, path: category.parent ? null : `data/${name}` };
+    Q.forEach(({ id, name, parent, description, position }) => {
+        categories[id] = { name, parent, description, path: parent ? null : `data/${name}`, position };
     });
     Object.values(categories).forEach(category => {
         if (category.parent)
@@ -160,12 +163,38 @@ function buildCategoryStructure(Q) {
     return categories;
 }
 
+function concatenate(arr1, arr2) {
+    const concatenated = new Uint8Array(arr1.length + arr2.length);
+    concatenated.set(arr1);
+    concatenated.set(arr2, arr1.length);
+    return concatenated;
+}
+
+function uuidToBinary(uuid) {
+    return uuid ? new Uint8Array(uuid.match(/\w{2}/g).map(byte => parseInt(byte, 16))) : new Uint8Array(16).fill(0);
+}
+
+function binaryToUuid(binary) {
+    const data = Array.from(binary).map(byte => byte.toString(16).padStart(2, '0')).join('');
+    return data === "00000000000000000000000000000000" ? null : data;
+}
+
+function generateUuid() {
+    try {
+        return crypto.randomUUID();
+    } catch (e) {
+        return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+            (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+        );
+    }
+}
+
 async function processData(W, categories) {
     const files = {};
     for (const item of W) {
         const categoryPath = item.category ? categories[item.category]?.path : 'data';
         const filePath = `${categoryPath}/${item.title}.hyl`;
-        files[filePath] = await encodeAndEncrypt(item.content, item.password, item.salt, item.key, item.iv, item.encrypted);
+        files[filePath] = await encodeAndEncrypt(item.content, item.category, item.password, item.salt, item.key, item.iv, item.encrypted, item.position);
     }
     return files;
 }
@@ -174,9 +203,14 @@ async function processCategories(categories) {
     const files = {};
     for (const id in categories) {
         const category = categories[id];
-        const filePath = `${category.path}/.category`;
+        const filePath = `${category.path}/category.info`;
         const data = new TextEncoder().encode(category.description || '');
-        files[filePath] = compress(data);
+        const buffer = new ArrayBuffer(36);
+        const view = new DataView(buffer);
+        new Uint8Array(buffer, 0, 16).set(uuidToBinary(id));
+        new Uint8Array(buffer, 16, 16).set(uuidToBinary(category.parent));
+        view.setUint32(32, category.position, true);
+        files[filePath] = compress(concatenate(new Uint8Array(buffer), data));
     }
     return files;
 }
@@ -298,7 +332,6 @@ function closeMenus() {
 function anonymous(txt, close=true) {
     decrypt(txt, "").then(decrypted => {
         if (decrypted) {
-            console.log("WELCOME, ADMIN");
             a = decrypted;
             localStorage.setItem("hyleus-admin", txt);
             document.getElementsByName("adm").forEach(ele => ele.classList.remove("hidden"));
@@ -317,10 +350,19 @@ async function anonymous2() {
         const repo = 'alfuwu/Hyleus';
         for (const path in files) {
             const content = btoa(String.fromCharCode(...new Uint8Array(files[path])));
+            let sha = null;
+            try {
+                const exists = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `token ${a}` }
+                });
+                if (exists.ok)
+                    sha = (await exists.json()).sha;
+            } catch (_) { }
             await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
                 method: 'PUT',
                 headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: O.value || "Update [no info provided]", content })
+                body: JSON.stringify({ message: O.value || "Update [no info provided]", content, sha })
             });
         }
         //await commitToGitHub(files, a);
@@ -333,16 +375,37 @@ U.addEventListener("click", event => { if (event.button === 0) anonymous(P.value
 
 O.addEventListener("keyup", event => { if (event.key === "Enter") anonymous2()})
 Y.addEventListener("click", event => { if (event.button === 0) anonymous2() })
-const raw = "https://alfuwu.github.io/Hyleus/data/Test.hyl"
 
 const dat = localStorage.getItem("hyleus-admin");
 if (dat !== null)
     anonymous(dat);
 
-
 (async () => {
-    let dat = await fetch(raw, {
-        method: `GET`
+    const dat = await fetch("https://alfuwu.github.io/Hyleus/data/Test.hyl", {
+        method: 'GET'
     });
-    console.log(new TextDecoder().decode(decompress(await dat.arrayBuffer())));
+    const decomp = decompress(await dat.arrayBuffer());
+    const uuid = binaryToUuid(decomp.slice(0, 16));
+    const position = new DataView(decomp.slice(16, 20).buffer).getUint32(0, true);
+    const encrypted = decomp[20] == 1;
+    const text = decomp.slice(25);
+    console.log("\n\nFILE");
+    console.log(new TextDecoder().decode(text));
+    console.log(uuid);
+    console.log(position);
+    console.log(encrypted);
+
+    const cat = await fetch("https://alfuwu.github.io/Hyleus/data/Magic/category.info", {
+        method: 'GET'
+    });
+    const cecomp = decompress(await cat.arrayBuffer());
+    const id = binaryToUuid(cecomp.slice(0, 16));
+    const parent = binaryToUuid(cecomp.slice(16, 32));
+    const catPos = new DataView(cecomp.slice(32, 36).buffer).getUint32(0, true);
+    const desc = cecomp.slice(36);
+    console.log("\n\nCATEGORY");
+    console.log(new TextDecoder().decode(desc));
+    console.log(id);
+    console.log(parent);
+    console.log(catPos);
 })();
