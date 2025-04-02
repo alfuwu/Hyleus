@@ -5,9 +5,7 @@
     <meta content="Hyleus" property="og:title">
     <meta content="The Hyleus project is a public documentation of the world of Hyleus.
 
-Within are several declassified excerpts detailing important peoples, events, kingdoms, the soul, and the laws of magic present within Hyleus.
-
-There are also classified excerpts and first-hand accounts contained within the Hyleus project not available for public perusal." property="og:description">
+Within are several declassified and classified excerpts detailing important peoples, first-hand accounts, geography, historical events, kingdoms, the soul, and the laws of magic present within Hyleus." property="og:description">
     <meta content="https://alfuwu.github.io/Hyleus/" property="og:url">
     <meta content="https://alfuwu.github.io/Images/newhyleusoutlined.png" property="og:image">
     <meta content="#FFAAAA" data-react-helmet="true" name="theme-color">
@@ -28,27 +26,36 @@ There are also classified excerpts and first-hand accounts contained within the 
     </ol>
     <div class="page" id="articles">
         <div class="hierarchy">
-            <div>
+            <div class="hflex">
                 <input type="text" placeholder="Search Hyleus..." id="search">
-                <img src="search.svg" class="inv ico smol">
+                <img src="search.svg" class="smol inv ico">
             </div>
             <div class="hflex">
                 <button class="ibtn v"><img src="articles.svg" class="inv2 ico y" alt="Articles">ARTICLES</button>
-                <button class="ibtn v"><img src="type.svg" class="inv2 ico y" alt="By Type">TYPE</button>
+                <button class="ibtn v"><img src="type.svg" class="inv2 ico y" alt="By Type">BY &#8203; &#8203; TYPE</button>
                 <button class="ibtn v"><img src="maps.svg" class="inv2 ico y" alt="Maps">MAPS</button>
             </div>
             <p id="search-text"></p>
             <hr>
-            <ol></ol>
+            <ol id="tree"></ol>
         </div>
         <div id="content">
-            <div id="nas">
+            <div id="nas" class="centered drop-shadow">
                 <h1 data-text="HYLEUS">HYLEUS</h1>
                 <hr>
                 <img src="https://alfuwu.github.io/Images/newhyleus.svg">
             </div>
-            <div id="create-form">
+            <div id="create-form" class="hidden">
                 
+            </div>
+            <div id="locked-article" class="big centered drop-shadow hidden">
+                <h1 data-text="THE WAY IS SHUT">THE WAY IS SHUT</h1>
+                <img src="lock.svg" class="smol inv">
+                <hr>
+                <input type="text" id="unencrypt">
+            </div>
+            <div id="article" class="hidden">
+
             </div>
         </div>
     </div>
@@ -57,7 +64,7 @@ There are also classified excerpts and first-hand accounts contained within the 
         <div class="menu hidden h" id="search-menu">
             <div>
                 <input type="text" placeholder="Search Hyleus..." id="search2">
-                <img src="search.svg" class="inv ico smol">
+                <img src="search.svg" class="smol inv ico">
             </div>
             <hr>
             <div class="scroll">
