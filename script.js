@@ -25,11 +25,16 @@ const T = document.getElementById("tree");
 const Q = []; // {id: uuid4, name: "Text", parent: null/parent uuid4, description: "Markdown text", position: number}
 const W = []; // {title: "Text", category: null/category uuid4, type: int, content: "Markdown text", password: null/"password", salt: Uint8Array, key: CryptoKey, iv: Uint8Array, encrypted: true/null, position: number}
 
+const AR = document.getElementById("ar");
+const BT = document.getElementById("by-type");
+const MP = document.getElementById("maps");
+
 // article types
 const ARTICLE = 0; // normal article
 
 const MENUS = [[K, C], [J, L], [G, V]];
 const CONTENTS = [N, B, I, D];
+const NAV_BUTTONS = [AR, BT, MP];
 
 let guh = localStorage.getItem("hyleus-admin");
 let a = null;
@@ -236,57 +241,62 @@ async function processCategories(categories) {
     return files;
 }
 
-async function getLatestCommitSHA(repo) {
-    const response = await fetch(`https://api.github.com/repos/${repo}/git/refs/heads/master`, {
-        headers: { 'Authorization': `token ${a}` }
-    });
-    const data = await response.json();
-    return data.object.sha;
-}
-
-async function getTree(repo, baseTreeSHA, files) {
-    const tree = [];
-    for (const path in files) {
-        tree.push({
-            path,
-            mode: "100644",
-            type: "blob",
-            content: btoa(String.fromCharCode(...new Uint8Array(files[path])))
-        });
-    }
-    const response = await fetch(`https://api.github.com/repos/${repo}/git/trees`, {
-        method: 'POST',
-        headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ base_tree: baseTreeSHA, tree })
-    });
-    const data = await response.json();
-    return data.sha;
-}
-
-async function createCommit(repo, parentSHA, treeSHA) {
-    const response = await fetch(`https://api.github.com/repos/${repo}/git/commits`, {
-        method: 'POST',
-        headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: O.value || "Update [no info provided]", tree: treeSHA, parents: [parentSHA] })
-    });
-    const data = await response.json();
-    return data.sha;
-}
-
-async function updateBranch(repo, commitSHA) {
-    await fetch(`https://api.github.com/repos/${repo}/git/refs/heads/master`, {
-        method: 'PATCH',
-        headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sha: commitSHA })
-    });
-}
-
 async function commitToGitHub(files, token) {
     const repo = 'alfuwu/Hyleus';
-    const latestCommitSHA = await getLatestCommitSHA(repo, token);
-    const treeSHA = await getTree(repo, token, latestCommitSHA, files);
-    const commitSHA = await createCommit(repo, token, latestCommitSHA, treeSHA);
-    await updateBranch(repo, token, commitSHA);
+    const blobs = [];
+    /*
+        for (const path in files) {
+            const content = arrToB64(new Uint8Array(files[path]));
+            let sha = null;
+            try {
+                const exists = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                    method: 'GET',
+                    headers: { 'Authorization': `token ${a}` }
+                });
+                if (exists.ok)
+                    sha = (await exists.json()).sha;
+            } catch (_) { }
+            await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
+                method: 'PUT',
+                headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: O.value || "Update [no info provided]", content, sha })
+            });
+        }
+    */
+    for (const path in files) {
+        const content = arrToB64(new Uint8Array(files[path]));
+        const resp = await fetch(`https://api.github.com/repos/${repo}/git/blobs`, {
+            method: 'POST',
+            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'accept': 'application/vnd.github+json' },
+            body: JSON.stringify({ content, encoding: "base64" })
+        });
+        blobs.push({path, mode: "100644", type: "blob", sha: (await resp.json()).sha});
+    }
+    const baseTree = await fetch(`https://api.github.com/repos/${repo}/git/trees/master`, {
+        method: 'GET',
+        headers: { 'accept': 'application/vnd.github+json' }
+    });
+    const bgase = await fetch(`https://api.github.com/repos/${repo}/git/trees`, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'accept': 'application/vnd.github+json' },
+        body: JSON.stringify({ base_tree: (await baseTree.json()).sha, tree: blobs })
+    });
+    const branch = await fetch(`https://api.github.com/repos/${repo}/git/refs/heads/master`, {
+        method: 'GET',
+        headers: { 'accept': 'application/vnd.github+json' }
+    });
+    const commit = await fetch(`https://api.github.com/repos/${repo}/git/commits`, {
+        method: 'POST',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'accept': 'application/vnd.github+json' },
+        body: JSON.stringify({ tree: (await bgase.json()).sha, message: O.value || "Update [no info provided]", parents: [(await branch.json()).object.sha] })
+    });
+    const ret = await commit.json()
+    await fetch(`https://api.github.com/repos/${repo}/git/refs/heads/master`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'accept': 'application/vnd.github+json' },
+        body: JSON.stringify({ sha: ret.sha })
+    });
+    return ret;
 }
 
 function arrToB64(arr) {
@@ -405,15 +415,16 @@ function constructTree() {
     for (const folder of Q) {
         const children = document.createElement("div");
         if (folder.id in categoryToFileMap) {
-            children.classList.add("big", "padr");
-            for (const child of categoryToFileMap)
+            children.classList.add("big", "padl");
+            for (const child of categoryToFileMap[folder.id])
                 children.append(createTreeItem(child.title, child));
-            T.append(children);
         }
         T.appendChild(createTreeItem(folder.name, children));
+        T.append(children);
     }
     for (const file of W)
-        T.appendChild(createTreeItem(file.title, file));
+        if (file.category === null)
+            T.appendChild(createTreeItem(file.title, file));
 }
 
 function opacitate(ele, startOpac, endOpac) {
@@ -477,6 +488,16 @@ function closeMenus() {
     P.value = "";
 }
 
+for (const navButton of NAV_BUTTONS)
+    navButton.addEventListener("click", event => {
+        if (event.button === 0) {
+            for (const nbtn of NAV_BUTTONS)
+                if (nbtn !== navButton)
+                    nbtn.classList.remove("selected");
+            navButton.classList.add("selected");
+        }
+    });
+
 function anonymous(txt, close=true) {
     decrypt(txt, "").then(decrypted => {
         if (decrypted) {
@@ -497,25 +518,7 @@ async function anonymous2() {
     if (a && b) {
         const categories = buildCategoryStructure(Q);
         const files = { ...await processData(W, categories), ...await processCategories(categories) };
-        const repo = 'alfuwu/Hyleus';
-        for (const path in files) {
-            const content = arrToB64(new Uint8Array(files[path]));
-            let sha = null;
-            try {
-                const exists = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `token ${a}` }
-                });
-                if (exists.ok)
-                    sha = (await exists.json()).sha;
-            } catch (_) { }
-            await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: O.value || "Update [no info provided]", content, sha })
-            });
-        }
-        //await commitToGitHub(files, a);
+        await commitToGitHub(files, a);
         console.log("COMMITED");
     }
 }
@@ -540,7 +543,7 @@ H.addEventListener("keyup", async (event) => {
             console.warn(e);
         }
     }
-})
+});
 
 if (guh !== null)
     anonymous(guh);
@@ -560,5 +563,6 @@ if (guh !== null)
             Q.push(decoded);
         }
     }
+    console.log(W);
     constructTree();
 })();

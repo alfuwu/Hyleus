@@ -161,9 +161,9 @@ h1, h2, h3 {
   transition: filter 300ms ease-in-out;
 }
 *:hover > .y {
-  filter: invert(90%) sepia(100%) saturate(500%) hue-rotate(-30deg);
+  filter: invert(90%) sepia(100%) saturate(500%) hue-rotate(-30deg) !important;
 }
-*:focus > .y {
+*.selected > .y {
   filter: invert(90%) sepia(200%) saturate(1000%) hue-rotate(-50deg);
 }
 
