@@ -22,8 +22,11 @@ const H = document.getElementById("unencrypt");
 const Y = document.getElementById("save");
 const O = document.getElementById("s");
 const T = document.getElementById("tree");
-const Q = []; // {id: uuid4, name: "Text", parent: null/parent uuid4, description: "Markdown text", position: number}
-const W = []; // {title: "Text", category: null/category uuid4, type: int, content: "Markdown text", password: null/"password", salt: Uint8Array, key: CryptoKey, iv: Uint8Array, encrypted: true/null, position: number}
+const Q = [
+    {id: "guh", name: "Subfolder", parent: "02e7807a2cef4267bbd1505f16b619e9", description: "Super folder", position: 1}
+]; // {id: null, name: "Text", parent: null, description: "Markdown text", position: 1}
+const W = [{title: "Text", category: "guh", type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}]; // {title: "Text", category: null, type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}
+const X = [];
 
 const AR = document.getElementById("ar");
 const BT = document.getElementById("by-type");
@@ -174,7 +177,24 @@ async function encodeAndEncrypt(content, category, type, password, salt, key, iv
     view.setUint32(16, position, true);
     view.setUint8(20, encrypted || salt && key && iv || password ? 1 : 0);
     //view.setUint8(21, type || 0);
-    return compress(concatenate(new Uint8Array(buffer), data));
+    const ret = compress(concatenate(new Uint8Array(buffer), data));
+    if (!encrypted) { // make sure that the data is decryptable
+        const text = decompress(b64ToArr(arrToB64(ret))).slice(21);
+        try {
+            if (password)
+                await getEncryptionData(password, text);
+            else if (key && iv)
+                await crypto.subtle.decrypt(
+                    { name: "AES-GCM", iv: iv, tagLength: 128 },
+                    key,
+                    new Uint8Array([...text.slice(44), ...text.slice(28, 44)])
+                );
+        } catch (e) {
+            console.warn("Encryption failed");
+            return null;
+        }
+    }
+    return ret;
 }
 
 function buildCategoryStructure(Q) {
@@ -218,9 +238,17 @@ function generateUuid() {
 async function processData(W, categories) {
     const files = {};
     for (const item of W) {
-        const categoryPath = item.category ? categories[item.category]?.path : 'data';
+        const categoryPath = item.category ? categories[item.category].path : 'data';
+        if (X.indexOf(`${categoryPath}/${item.title}`.substring(5)) === -1)
+            continue; // don't add files if they haven't been changed
         const filePath = `${categoryPath}/${item.title}.hyl`;
-        files[filePath] = await encodeAndEncrypt(item.content, item.category, item.type, item.password, item.salt, item.key, item.iv, item.encrypted, item.position);
+        for (let i = 0; i < 5; i++) { // 5 encryption attempts (idk if encryption is the problem or what, but for some reason some encrypted files will randomly stop working, sooo)
+            const data = await encodeAndEncrypt(item.content, item.category, item.type, item.password, item.salt, item.key, item.iv, item.encrypted, item.position);
+            if (data !== null) { // encryption may fail(?), so don't override if it does
+                files[filePath] = data;
+                break;
+            }
+        }
     }
     return files;
 }
@@ -228,6 +256,8 @@ async function processData(W, categories) {
 async function processCategories(categories) {
     const files = {};
     for (const id in categories) {
+        if (X.indexOf(id) === -1)
+            continue;
         const category = categories[id];
         const filePath = `${category.path}/category.info`;
         const data = new TextEncoder().encode(category.description || '');
@@ -241,34 +271,19 @@ async function processCategories(categories) {
     return files;
 }
 
+// this function won't work if there isn't already a commit in the repo
 async function commitToGitHub(files, token) {
+    if (Object.keys(files).length === 0) {
+        console.warn("Commit is empty; aborting");
+        return; // don't create empty commits
+    }
     const repo = 'alfuwu/Hyleus';
     const blobs = [];
-    /*
-        for (const path in files) {
-            const content = arrToB64(new Uint8Array(files[path]));
-            let sha = null;
-            try {
-                const exists = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                    method: 'GET',
-                    headers: { 'Authorization': `token ${a}` }
-                });
-                if (exists.ok)
-                    sha = (await exists.json()).sha;
-            } catch (_) { }
-            await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-                method: 'PUT',
-                headers: { 'Authorization': `token ${a}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: O.value || "Update [no info provided]", content, sha })
-            });
-        }
-    */
     for (const path in files) {
-        const content = arrToB64(new Uint8Array(files[path]));
         const resp = await fetch(`https://api.github.com/repos/${repo}/git/blobs`, {
             method: 'POST',
             headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'accept': 'application/vnd.github+json' },
-            body: JSON.stringify({ content, encoding: "base64" })
+            body: JSON.stringify({ content: arrToB64(new Uint8Array(files[path])), encoding: "base64" })
         });
         blobs.push({path, mode: "100644", type: "blob", sha: (await resp.json()).sha});
     }
@@ -304,7 +319,7 @@ function arrToB64(arr) {
 }
 
 function b64ToArr(b64) {
-    return new Uint8Array(atob(b64).split("").map(c => { return c.charCodeAt(0); }));
+    return new Uint8Array(atob(b64).map(c => c.charCodeAt(0)));
 }
 
 async function decodeFile(path) {
@@ -316,8 +331,6 @@ async function decodeFile(path) {
     let encrypted = decomp[20] == 1;
     //const type = decomp[21];
     let text = decomp.slice(21);
-    if (text[0] === 0)
-        text = decomp.slice(22);
     let salt, key, iv;
     if (encrypted && guh) {
         try {
@@ -404,27 +417,53 @@ function createTreeItem(text, dat) {
     return obj;
 }
 
+function handleTreeItem(fof, categoryMap, iter=1) {
+    if (fof.id) { // folder
+        const children = document.createElement("div");
+        if (fof.id in categoryMap) {
+            children.classList.add("big", "padl", "hidden");
+            for (const child of categoryMap[fof.id]) {
+                const item = handleTreeItem(child, categoryMap, iter+1);
+                if (item instanceof Array) {
+                    children.appendChild(item[0]);
+                    children.appendChild(item[1]);
+                } else {
+                    children.appendChild(item);
+                }
+            }
+        }
+        return [createTreeItem(fof.name, children), children];
+    }
+    return createTreeItem(fof.title, fof);
+}
+
 function constructTree() {
     T.innerHTML = ``; // remove all children
-    const categoryToFileMap = W.reduce((acc, { title, category, type, content, password, salt, key, iv, encrypted, position }) => {
-        if (!acc[category])
-          acc[category] = [];
-        acc[category].push({ title, category, type, content, password, salt, key, iv, encrypted, position });
+    const categoryMap = W.reduce((acc, item) => {
+        if (!acc[item.category])
+            acc[item.category] = [];
+        acc[item.category].push(item);
         return acc;
-      }, {});
-    for (const folder of Q) {
-        const children = document.createElement("div");
-        if (folder.id in categoryToFileMap) {
-            children.classList.add("big", "padl");
-            for (const child of categoryToFileMap[folder.id])
-                children.append(createTreeItem(child.title, child));
+    }, {});
+    Q.forEach(item => {
+        if (item.parent) {
+            if (!categoryMap[item.parent])
+                categoryMap[item.parent] = [];
+            categoryMap[item.parent].unshift(item);
         }
-        T.appendChild(createTreeItem(folder.name, children));
-        T.append(children);
+    });
+    for (const folder of Q) {
+        if (!folder.parent) {
+            const item = handleTreeItem(folder, categoryMap);
+            if (item) {
+                T.appendChild(item[0]);
+                T.appendChild(item[1]);
+            }
+        }
     }
     for (const file of W)
-        if (file.category === null)
-            T.appendChild(createTreeItem(file.title, file));
+        if (!file.category)
+            T.appendChild(handleTreeItem(file, undefined));
 }
 
 function opacitate(ele, startOpac, endOpac) {
