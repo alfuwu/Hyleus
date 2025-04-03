@@ -126,7 +126,7 @@ h1, h2, h3 {
   flex-direction: row;
 }
 
-.hierarchy {
+#hierarchy {
   position: absolute;
   left: -75px;
   width: 300px;
@@ -138,7 +138,7 @@ h1, h2, h3 {
   overflow-y: auto;
   flex: 0 0 140px;
 }
-.hierarchy > ol {
+#hierarchy > ol {
   list-style: none;
   padding-left: 5px;
 }
@@ -428,6 +428,35 @@ ol.nav > hr {
   .page {
     left: 0px;
     top: 45px;
+  }
+
+  #hierarchy {
+    position: absolute;
+    left: 0;
+    width: 200px;
+    padding: 5px 15px 5px 90px;
+    top: 0px;
+    bottom: 0px;
+    background: #131314;
+    overflow-x: hidden;
+    overflow-y: auto;
+    flex: 0 0 140px;
+    font-size: 0.6rem;
+  }
+}
+
+@media only screen and (orientation: portrait) {
+  #hierarchy {
+    position: absolute;
+    padding: 5px 15px;
+    left: 0px;
+    width: 100vw;
+    top: 0px;
+    bottom: 0px;
+    background: #131314;
+    overflow-x: hidden;
+    overflow-y: auto;
+    flex: 0 0 140px;
   }
 }
 

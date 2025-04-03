@@ -30,6 +30,8 @@ const AR = document.getElementById("ar");
 const BT = document.getElementById("by-type");
 const MP = document.getElementById("maps");
 
+const HR = document.getElementById("hierarchy");
+
 // article types
 const ARTICLE = 0; // normal article
 
@@ -480,7 +482,7 @@ function opacitate(ele, startOpac, endOpac) {
         duration: 200,
         fill: "forwards",
         easing: "ease-in-out"
-    })
+    });
 }
 
 S.addEventListener("input", () => {
@@ -589,6 +591,56 @@ H.addEventListener("keyup", async (event) => {
         }
     }
 });
+
+document.addEventListener("touchstart", handleTouchStart, false);        
+document.addEventListener("touchmove", handleTouchMove, false);
+
+let xDown = null;                                                        
+let yDown = null;
+let swiped = false;
+
+function handleTouchStart(evt) {
+    const firstTouch = evt.touches[0];                                      
+    xDown = firstTouch.clientX;                                      
+    yDown = firstTouch.clientY;                                      
+}
+
+function handleTouchMove(evt) {
+    if (!xDown || !yDown)
+        return;
+
+    var xUp = evt.touches[0].clientX;                                    
+    var yUp = evt.touches[0].clientY;
+
+    var xDiff = xDown - xUp;
+    var yDiff = yDown - yUp;
+    
+    if (Math.abs(xDiff) > Math.abs(yDiff) * 1.5) {
+        if (!swiped && xDiff > window.innerWidth / 4) {
+            swiped = true;
+            HR.animate([
+                { left: "0" },
+                { left: "-100vw" }
+            ], {
+                duration: 200,
+                fill: "forwards",
+                easing: "ease-in-out"
+            });
+        } else if (swiped && xDiff < -window.innerWidth / 4) {
+            swiped = false;
+            HR.animate([
+                { left: "-100vw" },
+                { left: "0" }
+            ], {
+                duration: 200,
+                fill: "forwards",
+                easing: "ease-in-out"
+            });
+        }
+    }
+    xDown = null;
+    yDown = null;                                             
+};
 
 if (guh !== null)
     anonymous(guh);
