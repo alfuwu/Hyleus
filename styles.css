@@ -395,6 +395,13 @@ ol.nav > hr {
 .fold:hover {
   background: rgba(0, 0, 0, 0.5);
 }
+.fold.selected {
+  background: rgba(111, 111, 111, 0.5);
+}
+.fold:active {
+  transition: background-color 100ms ease-in-out;
+  background: rgba(77, 77, 77, 0.5);
+}
 
 @media only screen and (max-width: 650px), (orientation: portrait) {
   ol.nav {

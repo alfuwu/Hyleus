@@ -22,10 +22,8 @@ const H = document.getElementById("unencrypt");
 const Y = document.getElementById("save");
 const O = document.getElementById("s");
 const T = document.getElementById("tree");
-const Q = [
-    {id: "guh", name: "Subfolder", parent: "02e7807a2cef4267bbd1505f16b619e9", description: "Super folder", position: 1}
-]; // {id: null, name: "Text", parent: null, description: "Markdown text", position: 1}
-const W = [{title: "Text", category: "guh", type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}]; // {title: "Text", category: null, type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}
+const Q = []; // {id: null, name: "Text", parent: null, description: "Markdown text", position: 1}
+const W = []; // {title: "Text", category: null, type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}
 const X = [];
 
 const AR = document.getElementById("ar");
@@ -378,8 +376,10 @@ function showContent(ele) {
 }
 
 function loadFile() {
-    if (c === null)
+    if (c === null) {
+        showContent(N);
         return;
+    }
     console.log(c);
     if (c.encrypted) {
         showContent(I);
@@ -410,7 +410,13 @@ function createTreeItem(text, dat) {
     else
         obj.addEventListener("click", event => {
             if (event.button === 0) {
-                c = dat;
+                if (c)
+                    c.obj.classList.remove("selected");
+                c = c === dat ? null : dat;
+                if (c) {
+                    c.obj = obj;
+                    obj.classList.add("selected");
+                }
                 loadFile();
             }
         })
