@@ -60,7 +60,10 @@ a:hover::after {
   clip-path: inset(-100% -100% -100% -100%);
 }
 
-input {
+textarea {
+  resize: none;
+}
+input, textarea {
   background: #111;
   color: #eee;
   border: transparent;
@@ -69,9 +72,11 @@ input {
   border-radius: 5px;
   transition: background-color 200ms ease-in-out, border-bottom 200ms ease-in-out;
 }
+input:focus, textarea:focus {
+  outline: none;
+}
 input:focus {
   background: #222;
-  outline: none;
   border-bottom: 3px solid rgba(255, 223, 186, 0);
 }
 
@@ -242,21 +247,43 @@ h1, h2, h3 {
 #nas img:hover {
   filter: drop-shadow(0 0 0.5em #00ff69) drop-shadow(0 1em 2em #000);
 }
+#article, #create-form {
+  overflow-y: auto;
+  width: 100%;
+  max-width: 960px;
+  padding: 10px 80px;
+  margin: 20px 0 0 0;
+  min-height: calc(100vh - 40px);
+  height: calc(100vh - 40px);
+  scroll-margin-top: 4rem;
+}
 #article {
   display: flex;
   align-items: stretch;
   justify-content: space-between;
-  overflow-y: auto;
   flex-flow: column nowrap;
-  width: 100%;
-  max-width: 960px;
   background: rgb(34, 34, 35);
-  padding: 10px 80px;
-  margin: 20px 0 0 0;
-  min-height: calc(100vh - 40px);
-  scroll-margin-top: 4rem;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3),
               0 4px 16px rgba(0, 0, 0, 0.3);
+}
+#create-form {
+  flex-direction: row;
+}
+#form-data {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+#form-data > * {
+  width: 100%;
+}
+#form-data > textarea {
+  margin-top: 10px;
+  min-height: 80%;
+}
+#form-data > input {
+  font-size: 1.5em;
+  min-height: 2em;
 }
 
 #menus {
@@ -403,6 +430,28 @@ ol.nav > hr {
   background: rgba(77, 77, 77, 0.5);
 }
 
+.ctx-menu {
+  background-color: rgb(34, 34, 35);
+  width: 20em;
+  font-size: 0.9rem;
+  position: fixed;
+  border-radius: 8px;
+  border: 1px solid #bcbbca58;
+  box-shadow: 0 12px 24px 0 hsl(none 0% 0%/0.24),
+              0 12px 24px 0 hsl(none 0% 0%/0.24);
+}
+.ctx-menu ul {
+  list-style-type: none;
+  padding: 0;
+}
+.ctx-menu li {
+  padding: 0.3em 4em;
+}
+.ctx-menu li:hover {
+  background-color: rgba(44, 141, 247, 0.2);
+  cursor: pointer;
+}
+
 @media only screen and (max-width: 650px), (orientation: portrait) {
   ol.nav {
     overflow-x: auto;
@@ -446,6 +495,10 @@ ol.nav > hr {
 }
 
 @media only screen and (orientation: portrait) {
+  body {
+    overflow-x: hidden;
+  }
+
   #hierarchy {
     position: absolute;
     padding: 5px 15px;

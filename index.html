@@ -27,7 +27,7 @@ Within are several declassified and classified excerpts detailing important peop
     <div class="page" id="articles">
         <div id="hierarchy">
             <div class="hflex">
-                <input type="text" placeholder="Search Hyleus..." id="search">
+                <input type="text" placeholder="Search Hyleus..." id="search" autocomplete="off">
                 <img src="search.svg" class="smol inv ico">
             </div>
             <div class="hflex">
@@ -46,7 +46,13 @@ Within are several declassified and classified excerpts detailing important peop
                 <img src="https://alfuwu.github.io/Images/newhyleus.svg">
             </div>
             <div id="create-form" class="hidden">
-                
+                <div id="form-data">
+                    <input id="name" autocomplete="off">
+                    <textarea id="article-content" autocomplete="off" autocorrect spellcheck></textarea>
+                </div>
+                <div>
+
+                </div>
             </div>
             <div id="locked-article" class="big centered drop-shadow hidden">
                 <h1 data-text="THE WAY IS SHUT">THE WAY IS SHUT</h1>
@@ -63,7 +69,7 @@ Within are several declassified and classified excerpts detailing important peop
         <div class="h" id="f"></div>
         <div class="menu hidden h" id="search-menu">
             <div>
-                <input type="text" placeholder="Search Hyleus..." id="search2">
+                <input type="text" placeholder="Search Hyleus..." id="search2" autocomplete="off">
                 <img src="search.svg" class="smol inv ico">
             </div>
             <hr>
@@ -76,15 +82,33 @@ Within are several declassified and classified excerpts detailing important peop
         </div>
         <div class="menu hidden h" id="admin-menu">
             <h1>ADMIN LOGIN</h1>
-            <input type="password" placeholder="" id="a">
+            <input type="password" placeholder="" id="a" autocomplete="off">
             <button id="al">Login</button>
         </div>
         <div class="menu hidden h" id="save-menu">
             <h1>SAVE</h1>
-            <input type="text" placeholder="Commit message" id="s">
+            <input type="text" placeholder="Commit message" id="s" autocomplete="off">
             <button id="save">Save</button>
         </div>
     </div>
+    </div>
+    <div id="hierarchy-file-context-menu" class="ctx-menu hidden">
+        <ul>
+            <li onclick="">Edit</li>
+            <li onclick="">Delete</li>
+        </ul>
+    </div>
+    <div id="hierarchy-folder-context-menu" class="ctx-menu hidden">
+        <ul>
+            <li onclick="">New</li>
+            <li onclick="">Edit</li>
+            <li onclick="">Delete</li>
+        </ul>
+    </div>
+    <div id="hierarchy-context-menu" class="ctx-menu hidden">
+        <ul>
+            <li onclick="showContent(D);">New</li>
+        </ul>
     </div>
     <script type="text/javascript" src="script.js"></script>
 </body>

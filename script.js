@@ -31,6 +31,9 @@ const BT = document.getElementById("by-type");
 const MP = document.getElementById("maps");
 
 const HR = document.getElementById("hierarchy");
+const HC = document.getElementById("hierarchy-context-menu");
+const HFE = document.getElementById("hierarchy-file-context-menu");
+const HFR = document.getElementById("hierarchy-folder-context-menu");
 
 // article types
 const ARTICLE = 0; // normal article
@@ -38,6 +41,7 @@ const ARTICLE = 0; // normal article
 const MENUS = [[K, C], [J, L], [G, V]];
 const CONTENTS = [N, B, I, D];
 const NAV_BUTTONS = [AR, BT, MP];
+const CONTEXT_MENUS = [HC, HFE, HFR];
 
 let guh = localStorage.getItem("hyleus-admin");
 let a = null;
@@ -377,6 +381,16 @@ function showContent(ele) {
     ele.classList.remove("hidden");
 }
 
+function showContextMenu(ele, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    ele.classList.remove("hidden");
+    ele.style.left = event.pageX + "px";
+    ele.style.top = event.pageY  + "px";
+}
+
 function loadFile() {
     if (c === null) {
         showContent(N);
@@ -404,12 +418,13 @@ function createTreeItem(text, dat) {
     ico.src = folder ? "folder.svg" : "article.svg";
     obj.appendChild(ico);
     obj.appendChild(document.createTextNode(text));
-    if (folder)
+    if (folder) {
         obj.addEventListener("click", event => {
             if (event.button === 0)
                 dat.classList.toggle("hidden");
         });
-    else
+        obj.addEventListener("contextmenu", event => showContextMenu(HFR, event));
+    } else {
         obj.addEventListener("click", event => {
             if (event.button === 0) {
                 if (c)
@@ -421,7 +436,9 @@ function createTreeItem(text, dat) {
                 }
                 loadFile();
             }
-        })
+        });
+        obj.addEventListener("contextmenu", event => showContextMenu(HFE, event));
+    }
     return obj;
 }
 
@@ -500,6 +517,11 @@ for (const m of MENUS)
                 opacitate(m[0], 0, 1);
             }
         });
+
+E.addEventListener("click", event => {
+    if (event.button === 0)
+        showContent(D);
+});
 
 L.addEventListener("click", event => {
     if (event.button === 0) {
@@ -592,56 +614,6 @@ H.addEventListener("keyup", async (event) => {
     }
 });
 
-document.addEventListener("touchstart", handleTouchStart, false);        
-document.addEventListener("touchmove", handleTouchMove, false);
-
-let xDown = null;                                                        
-let yDown = null;
-let swiped = false;
-
-function handleTouchStart(evt) {
-    const firstTouch = evt.touches[0];                                      
-    xDown = firstTouch.clientX;                                      
-    yDown = firstTouch.clientY;                                      
-}
-
-function handleTouchMove(evt) {
-    if (!xDown || !yDown)
-        return;
-
-    var xUp = evt.touches[0].clientX;                                    
-    var yUp = evt.touches[0].clientY;
-
-    var xDiff = xDown - xUp;
-    var yDiff = yDown - yUp;
-    
-    if (Math.abs(xDiff) > Math.abs(yDiff) * 1.5) {
-        if (!swiped && xDiff > window.innerWidth / 4) {
-            swiped = true;
-            HR.animate([
-                { left: "0" },
-                { left: "-100vw" }
-            ], {
-                duration: 200,
-                fill: "forwards",
-                easing: "ease-in-out"
-            });
-        } else if (swiped && xDiff < -window.innerWidth / 4) {
-            swiped = false;
-            HR.animate([
-                { left: "-100vw" },
-                { left: "0" }
-            ], {
-                duration: 200,
-                fill: "forwards",
-                easing: "ease-in-out"
-            });
-        }
-    }
-    xDown = null;
-    yDown = null;                                             
-};
-
 if (guh !== null)
     anonymous(guh);
 
@@ -663,3 +635,14 @@ if (guh !== null)
     console.log(W);
     constructTree();
 })();
+
+document.addEventListener("click", () => {
+    for (const ctxMenu of CONTEXT_MENUS)
+        ctxMenu.classList.add("hidden");
+});
+document.addEventListener("contextmenu", event => {
+    event.preventDefault();
+    for (const ctxMenu of CONTEXT_MENUS)
+        ctxMenu.classList.add("hidden");
+});
+HR.addEventListener("contextmenu", event => showContextMenu(HC, event));
