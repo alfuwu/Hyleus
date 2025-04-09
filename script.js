@@ -27,7 +27,7 @@ const W = []; // {title: "Text", category: null, type: 0, content: "Markdown tex
 const X = [];
 
 const AR = document.getElementById("ar");
-const BT = document.getElementById("by-type");
+//const BT = document.getElementById("by-type");
 const MP = document.getElementById("maps");
 
 const HR = document.getElementById("hierarchy");
@@ -35,13 +35,34 @@ const HC = document.getElementById("hierarchy-context-menu");
 const HFE = document.getElementById("hierarchy-file-context-menu");
 const HFR = document.getElementById("hierarchy-folder-context-menu");
 
+const CA = document.getElementById("categories");
+
+const AC = document.getElementById("article-category");
+const AP = document.getElementById("article-password");
+const UP = document.getElementById("uap");
+const AD = document.getElementById("article-create");
+
 // article types
 const ARTICLE = 0; // normal article
 
 const MENUS = [[K, C], [J, L], [G, V]];
 const CONTENTS = [N, B, I, D];
-const NAV_BUTTONS = [AR, BT, MP];
+const NAV_BUTTONS = [AR, /*BT,*/ MP];
 const CONTEXT_MENUS = [HC, HFE, HFR];
+
+const MARKDOWN = [
+    ["*", "<i>", false],
+    //["**", "<b>", false],
+    //["# ", "<h1>", true],
+    //["## ", "<h2>", true],
+    //["### ", "<h3>", true],
+    //["#### ", "<h4>", true],
+    //["##### ", "<h5>", true],
+    //["###### ", "<h6>", true],
+    //["-# ", "<span class=\"st\">", true],
+]
+const MD_ESC = "\\"
+const MD_UNLISTS = ["- ", "* "]
 
 let guh = localStorage.getItem("hyleus-admin");
 let a = null;
@@ -326,6 +347,12 @@ function b64ToArr(b64) {
     return new Uint8Array(atob(b64).map(c => c.charCodeAt(0)));
 }
 
+function insertText(originalString, textToInsert, index) {
+    const array = originalString.split('');
+    array.splice(index, 0, textToInsert);
+    return array.join('');
+}
+
 async function decodeFile(path) {
     const dat = await fetch(`https://alfuwu.github.io/Hyleus/data/${path}`, {
         method: 'GET'
@@ -386,6 +413,8 @@ function showContextMenu(ele, event) {
         event.preventDefault();
         event.stopPropagation();
     }
+    for (const ctxMenu of CONTEXT_MENUS)
+        ctxMenu.classList.add("hidden");
     ele.classList.remove("hidden");
     ele.style.left = event.pageX + "px";
     ele.style.top = event.pageY  + "px";
@@ -447,7 +476,8 @@ function handleTreeItem(fof, categoryMap, iter=1) {
         const children = document.createElement("div");
         if (fof.id in categoryMap) {
             children.classList.add("big", "padl", "hidden");
-            for (const child of categoryMap[fof.id]) {
+            for (const child of categoryMap[fof.id].sort((i1, i2) => i1.id && !i2.id ? -1 : i2.id && !i1.id ? 1 : i1.position !== i2.position ? i1.position - i2.position : i1.id && i2.id ? i1.name.localeCompare(i2.name) : i1.title.localeCompare(i2.title))) {
+                console.log(child.description)
                 const item = handleTreeItem(child, categoryMap, iter+1);
                 if (item instanceof Array) {
                     children.appendChild(item[0]);
@@ -477,7 +507,7 @@ function constructTree() {
             categoryMap[item.parent].unshift(item);
         }
     });
-    for (const folder of Q) {
+    for (const folder of Q.sort((i1, i2) => i1.position !== i2.position ? i1.position - i2.position : i1.name.localeCompare(i2.name))) {
         if (!folder.parent) {
             const item = handleTreeItem(folder, categoryMap);
             if (item) {
@@ -486,9 +516,15 @@ function constructTree() {
             }
         }
     }
-    for (const file of W)
+    console.log(W.sort((i1, i2) => i1.position !== i2.position ? i1.position - i2.position : i1.title.localeCompare(i2.title)));
+    for (const file of W.sort((i1, i2) => i1.position !== i2.position ? i1.position - i2.position : i1.title.localeCompare(i2.title)))
         if (!file.category)
             T.appendChild(handleTreeItem(file, undefined));
+}
+
+function constructCategoriesList() {
+    for (const child of Q)
+        CA.appendChild(document.createElement("option").appendChild(document.createTextNode(child.name)).parentElement);
 }
 
 function opacitate(ele, startOpac, endOpac) {
@@ -592,6 +628,8 @@ async function anonymous2() {
     }
 }
 
+UP.addEventListener("input", () => AP.disabled = UP.checked);
+
 P.addEventListener("keyup", event => { if (event.key === "Enter") anonymous(P.value) });
 U.addEventListener("click", event => { if (event.button === 0) anonymous(P.value) });
 
@@ -614,6 +652,80 @@ H.addEventListener("keyup", async (event) => {
     }
 });
 
+function parse(text) {
+    return text
+        //.replace(/^(#{1,6}) (.+)$/gm, (_, headerSize, content) => { return `<h${headerSize.length}><span class="mds">${headerSize}</span> ${content}`; })
+        .replace(/^-# (.+)$/gm, '<span class="st"><span class="mds"><b>-#</b></span> $1</span>')
+        .replace(/~~(.+?[^\\])~~/gm, '<span class="mds">~~</span><s>$1</s><span class="mds">~~</span>') // strikethrough
+        .replace(/(^|[^_\\])__([^_]+?[^\\_])__($|[^_])/gm, '$1<span class="mds">__</span><u>$2</u><span class="mds">__</span>$3') // underlined
+        .replace(/(^|[^_\\])_([^_]+?[^\\_])_($|[^_])/gm, '$1<span class="mds">_</span><i>$2</i><span class="mds">_</span>$3') // italic text
+        .replace(/(^|[^*\\])\*\*\*([^*]+?[^\\*])\*\*\*($|[^*])/gm, '$1<span class="mds">***</span><b><i>$2</i></b><span class="mds">***</span>$3') // italic bold text
+        .replace(/(^|[^*\\])\*\*([^*]+?[^\\*])\*\*($|[^*])/gm, '$1<span class="mds">**</span><b>$2</b><span class="mds">**</span>$3') // bold text
+        .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<span class="mds">*</span><i>$2</i><span class="mds">*</span>$3') // italic text
+        .replace(/\n/gm, "<br> ") // special characters (super amazing hack with space)
+        .replace(/\t/gm, "&#9;");
+}
+
+function getCursorPosition(parent, node, offset, stat) {
+    if (stat.done) return stat;
+
+    let currentNode = null;
+    if (parent.childNodes.length == 0) {
+        stat.pos += parent.textContent.length;
+    } else {
+        for (let i = 0; i < parent.childNodes.length && !stat.done; i++) {
+            currentNode = parent.childNodes[i];
+            if (currentNode === node) {
+                stat.pos += offset;
+                stat.done = true;
+                return stat;
+            } else {
+                getCursorPosition(currentNode, node, offset, stat);
+            }
+        }
+    }
+    return stat;
+}
+
+function setCursorPosition(parent, range, stat) {
+    if (stat.done) return range;
+
+    if (parent.childNodes.length == 0) {
+        if (parent.textContent.length >= stat.pos) {
+            range.setStart(parent, stat.pos);
+            stat.done = true;
+        } else {
+            stat.pos = stat.pos - parent.textContent.length;
+        }
+    } else {
+        for (let i = 0; i < parent.childNodes.length && !stat.done; i++) {
+            currentNode = parent.childNodes[i];
+            setCursorPosition(currentNode, range, stat);
+        }
+    }
+    return range;
+}
+
+for (const inline of document.getElementsByClassName("inline-md")) {
+    inline.addEventListener("input", () => {
+        const sel = window.getSelection();
+        const node = sel.focusNode;
+        const offset = sel.focusOffset;
+        const pos = getCursorPosition(inline, node, offset, { pos: 0, done: false });
+        if (offset === 0) pos.pos += 0.5;
+    
+        inline.innerHTML = parse(inline.innerText);
+    
+        sel.removeAllRanges();
+        const range = setCursorPosition(inline, document.createRange(), {
+            pos: pos.pos,
+            done: false,
+        });
+        range.collapse(true);
+        sel.addRange(range);
+    });
+}
+
 if (guh !== null)
     anonymous(guh);
 
@@ -632,8 +744,8 @@ if (guh !== null)
             Q.push(decoded);
         }
     }
-    console.log(W);
     constructTree();
+    constructCategoriesList(); // important!! do this after constructTree, since constructTree sorts all categories
 })();
 
 document.addEventListener("click", () => {
@@ -641,7 +753,7 @@ document.addEventListener("click", () => {
         ctxMenu.classList.add("hidden");
 });
 document.addEventListener("contextmenu", event => {
-    event.preventDefault();
+    //event.preventDefault();
     for (const ctxMenu of CONTEXT_MENUS)
         ctxMenu.classList.add("hidden");
 });

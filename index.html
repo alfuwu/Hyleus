@@ -32,12 +32,16 @@ Within are several declassified and classified excerpts detailing important peop
             </div>
             <div class="hflex">
                 <button class="ibtn v selected" id="ar"><img src="articles.svg" class="inv2 ico y" alt="Articles">ARTICLES</button>
-                <button class="ibtn v" id="by-type"><img src="type.svg" class="inv2 ico y" alt="By Type">BY &#8203; &#8203; TYPE</button>
+                <!--button class="ibtn v" id="by-type"><img src="type.svg" class="inv2 ico y" alt="By Type">BY &#8203; &#8203; TYPE</button-->
                 <button class="ibtn v" id="maps"><img src="maps.svg" class="inv2 ico y" alt="Maps">MAPS</button>
             </div>
             <p id="search-text"></p>
             <hr>
             <ol id="tree"></ol>
+            <ol id="type-tree" class="hidden">
+                <li>Articles</li>
+            </ol>
+            <ol id="map-tree" class="hidden"></ol>
         </div>
         <div id="content">
             <div id="nas" class="centered drop-shadow">
@@ -46,12 +50,21 @@ Within are several declassified and classified excerpts detailing important peop
                 <img src="https://alfuwu.github.io/Images/newhyleus.svg">
             </div>
             <div id="create-form" class="hidden">
-                <div id="form-data">
+                <div id="article-content">
                     <input id="name" autocomplete="off">
-                    <textarea id="article-content" autocomplete="off" autocorrect spellcheck></textarea>
+                    <div id="article-content" class="inline-md" contenteditable autocorrect spellcheck></textarea>
                 </div>
-                <div>
-
+                <div id="article-metadata">
+                    <label>Category</label>
+                    <input id="article-category" type="text" list="categories">
+                    <datalist id="categories"></datalist>
+                    <label>Password</label>
+                    <input id="article-password" type="text">
+                    <div>
+                        <label for="uap">Use AP</label>
+                        <input id="uap" type="checkbox">
+                    </div>
+                    <button id="article-create">Create</button>
                 </div>
             </div>
             <div id="locked-article" class="big centered drop-shadow hidden">
@@ -92,24 +105,20 @@ Within are several declassified and classified excerpts detailing important peop
         </div>
     </div>
     </div>
-    <div id="hierarchy-file-context-menu" class="ctx-menu hidden">
-        <ul>
-            <li onclick="">Edit</li>
-            <li onclick="">Delete</li>
-        </ul>
-    </div>
-    <div id="hierarchy-folder-context-menu" class="ctx-menu hidden">
-        <ul>
-            <li onclick="">New</li>
-            <li onclick="">Edit</li>
-            <li onclick="">Delete</li>
-        </ul>
-    </div>
-    <div id="hierarchy-context-menu" class="ctx-menu hidden">
-        <ul>
-            <li onclick="showContent(D);">New</li>
-        </ul>
-    </div>
+    <div id="hierarchy-file-context-menu" class="ctx-menu hidden"><ul>
+        <li onclick="">Edit</li>
+        <li onclick="">Delete</li>
+    </ul></div>
+    <div id="hierarchy-folder-context-menu" class="ctx-menu hidden"><ul>
+        <li onclick="">New Folder</li>
+        <li onclick="">New Article</li>
+        <li onclick="">Edit</li>
+        <li onclick="">Delete</li>
+    </ul></div>
+    <div id="hierarchy-context-menu" class="ctx-menu hidden"><ul>
+        <li onclick="">New Folder</li>
+        <li onclick="">New Article</li>
+    </ul></div>
     <script type="text/javascript" src="script.js"></script>
 </body>
 </html>
