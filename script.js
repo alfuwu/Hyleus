@@ -50,20 +50,6 @@ const CONTENTS = [N, B, I, D];
 const NAV_BUTTONS = [AR, /*BT,*/ MP];
 const CONTEXT_MENUS = [HC, HFE, HFR];
 
-const MARKDOWN = [
-    ["*", "<i>", false],
-    //["**", "<b>", false],
-    //["# ", "<h1>", true],
-    //["## ", "<h2>", true],
-    //["### ", "<h3>", true],
-    //["#### ", "<h4>", true],
-    //["##### ", "<h5>", true],
-    //["###### ", "<h6>", true],
-    //["-# ", "<span class=\"st\">", true],
-]
-const MD_ESC = "\\"
-const MD_UNLISTS = ["- ", "* "]
-
 let guh = localStorage.getItem("hyleus-admin");
 let a = null;
 let b = true;
@@ -345,12 +331,6 @@ function arrToB64(arr) {
 
 function b64ToArr(b64) {
     return new Uint8Array(atob(b64).map(c => c.charCodeAt(0)));
-}
-
-function insertText(originalString, textToInsert, index) {
-    const array = originalString.split('');
-    array.splice(index, 0, textToInsert);
-    return array.join('');
 }
 
 async function decodeFile(path) {
