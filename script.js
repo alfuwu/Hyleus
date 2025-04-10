@@ -635,7 +635,7 @@ H.addEventListener("keyup", async (event) => {
 function parse(text) {
     return text
         .replace(/</gm, "&lt;")
-        //.replace(/^(#{1,6}) (.+)$/gm, (_, headerSize, content) => { return `<h${headerSize.length}><span class="mds">${headerSize}</span> ${content}`; })
+        .replace(/^(#{1,6}) (.+)$/gm, (_, header, content) => { return `<span class="h${header.length}"><span class="mds">${header}</span> ${content}</span>`; })
         .replace(/^-# (.+)$/gm, '<span class="st"><span class="mds"><b>-#</b></span> $1</span>')
         .replace(/~~(.+?[^\\])~~/gm, '<span class="mds">~~</span><s>$1</s><span class="mds">~~</span>') // strikethrough
         .replace(/(^|[^_\\])__([^_]+?[^\\_])__($|[^_])/gm, '$1<span class="mds">__</span><u>$2</u><span class="mds">__</span>$3') // underlined
@@ -653,7 +653,8 @@ function restore(context, selection, len) {
     selection.addRange(range);
 }
 
-function getTextNodeAtPosition(root, index){
+function getTextNodeAtPosition(root, index) {
+    console.log(index);
     const NODE_TYPE = NodeFilter.SHOW_TEXT;
     let treeWalker = document.createTreeWalker(root, NODE_TYPE, function next(elem) {
         if (index > elem.textContent.length){
@@ -690,7 +691,7 @@ function diffStrings(oldStr, newStr) {
     const deleted = oldStr.slice(start, endOld + 1);
     const added = newStr.slice(start, endNew + 1);
 
-    return { added, deleted };
+    return { added, deleted, start, endOld, endNew };
 }
 
 for (const inline of document.getElementsByClassName("inline-md")) {
@@ -706,14 +707,14 @@ for (const inline of document.getElementsByClassName("inline-md")) {
         const added = diff.added;
         prevText = inline.innerText;
         
-        console.log(undefined, added);
         if (added[0] === "\n" && diff.deleted === "") {// evil hardcoded comparison hack (99% fail)
-            if (added.length > 2)
+            console.log(diff.start, len);
+            if (len === 0) {
                 inline.innerHTML = "\n" + inline.innerHTML.substring(15);
-            else if (rstr[len - 1] === "\n") // more evil code
-                inline.innerHTML = rstr.substring(0, len - 1) + inline.innerHTML.substring(len);
-            else
-                len += 1;}
+                restore(inline, selection, 1);
+            } else if (rstr[len - 1] === "\n") // more evil code
+                inline.innerText = inline.innerText.substring(0, len - 1) + inline.innerText.substring(len);
+            len += 1;}
         
         const parsed = parse(inline.innerText);
         if (inline.innerHTML !== parsed) {
