@@ -634,6 +634,7 @@ H.addEventListener("keyup", async (event) => {
 
 function parse(text) {
     return text
+        .replace(/</gm, "&lt;")
         //.replace(/^(#{1,6}) (.+)$/gm, (_, headerSize, content) => { return `<h${headerSize.length}><span class="mds">${headerSize}</span> ${content}`; })
         .replace(/^-# (.+)$/gm, '<span class="st"><span class="mds"><b>-#</b></span> $1</span>')
         .replace(/~~(.+?[^\\])~~/gm, '<span class="mds">~~</span><s>$1</s><span class="mds">~~</span>') // strikethrough
@@ -641,68 +642,84 @@ function parse(text) {
         .replace(/(^|[^_\\])_([^_]+?[^\\_])_($|[^_])/gm, '$1<span class="mds">_</span><i>$2</i><span class="mds">_</span>$3') // italic text
         .replace(/(^|[^*\\])\*\*\*([^*]+?[^\\*])\*\*\*($|[^*])/gm, '$1<span class="mds">***</span><b><i>$2</i></b><span class="mds">***</span>$3') // italic bold text
         .replace(/(^|[^*\\])\*\*([^*]+?[^\\*])\*\*($|[^*])/gm, '$1<span class="mds">**</span><b>$2</b><span class="mds">**</span>$3') // bold text
-        .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<span class="mds">*</span><i>$2</i><span class="mds">*</span>$3') // italic text
-        .replace(/\n/gm, "<br> ") // special characters (super amazing hack with space)
-        .replace(/\t/gm, "&#9;");
+        .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<span class="mds">*</span><i>$2</i><span class="mds">*</span>$3'); // italic text
 }
 
-function getCursorPosition(parent, node, offset, stat) {
-    if (stat.done) return stat;
-
-    let currentNode = null;
-    if (parent.childNodes.length == 0) {
-        stat.pos += parent.textContent.length;
-    } else {
-        for (let i = 0; i < parent.childNodes.length && !stat.done; i++) {
-            currentNode = parent.childNodes[i];
-            if (currentNode === node) {
-                stat.pos += offset;
-                stat.done = true;
-                return stat;
-            } else {
-                getCursorPosition(currentNode, node, offset, stat);
-            }
-        }
-    }
-    return stat;
+function restore(context, selection, len) {
+    let pos = getTextNodeAtPosition(context, len);
+    selection.removeAllRanges();
+    let range = new Range();
+    range.setStart(pos.node, pos.position);
+    selection.addRange(range);
 }
 
-function setCursorPosition(parent, range, stat) {
-    if (stat.done) return range;
+function getTextNodeAtPosition(root, index){
+    const NODE_TYPE = NodeFilter.SHOW_TEXT;
+    let treeWalker = document.createTreeWalker(root, NODE_TYPE, function next(elem) {
+        if (index > elem.textContent.length){
+            index -= elem.textContent.length;
+            return NodeFilter.FILTER_REJECT
+        }
+        return NodeFilter.FILTER_ACCEPT;
+    });
+    let c = treeWalker.nextNode();
+    return {
+        node: c ? c : root,
+        position: index
+    };
+}
 
-    if (parent.childNodes.length == 0) {
-        if (parent.textContent.length >= stat.pos) {
-            range.setStart(parent, stat.pos);
-            stat.done = true;
-        } else {
-            stat.pos = stat.pos - parent.textContent.length;
-        }
-    } else {
-        for (let i = 0; i < parent.childNodes.length && !stat.done; i++) {
-            currentNode = parent.childNodes[i];
-            setCursorPosition(currentNode, range, stat);
-        }
+function diffStrings(oldStr, newStr) {
+    let start = 0;
+    
+    while (start < oldStr.length && start < newStr.length && oldStr[start] === newStr[start]) {
+        start++;
     }
-    return range;
+
+    let endOld = oldStr.length - 1;
+    let endNew = newStr.length - 1;
+    while (
+        endOld >= start &&
+        endNew >= start &&
+        oldStr[endOld] === newStr[endNew]
+    ) {
+        endOld--;
+        endNew--;
+    }
+
+    const deleted = oldStr.slice(start, endOld + 1);
+    const added = newStr.slice(start, endNew + 1);
+
+    return { added, deleted };
 }
 
 for (const inline of document.getElementsByClassName("inline-md")) {
-    inline.addEventListener("input", () => {
-        const sel = window.getSelection();
-        const node = sel.focusNode;
-        const offset = sel.focusOffset;
-        const pos = getCursorPosition(inline, node, offset, { pos: 0, done: false });
-        if (offset === 0) pos.pos += 0.5;
-    
-        inline.innerHTML = parse(inline.innerText);
-    
-        sel.removeAllRanges();
-        const range = setCursorPosition(inline, document.createRange(), {
-            pos: pos.pos,
-            done: false,
-        });
-        range.collapse(true);
-        sel.addRange(range);
+    let prevText = inline.innerText;
+    inline.addEventListener("input", () => { // god save my soul
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        range.setStart(inline, 0);
+        const rstr = range.toString();
+        let len = rstr.length;
+        range.collapse(false);
+        const diff = diffStrings(prevText, inline.innerText);
+        const added = diff.added;
+        prevText = inline.innerText;
+        
+        console.log(undefined, added);
+        if (added[0] === "\n" && diff.deleted === "") {// evil hardcoded comparison hack (99% fail)
+            if (added.length > 2)
+                inline.innerHTML = "\n" + inline.innerHTML.substring(15);
+            else if (rstr[len - 1] === "\n") // more evil code
+                inline.innerHTML = rstr.substring(0, len - 1) + inline.innerHTML.substring(len);
+            else
+                len += 1;}
+        
+        const parsed = parse(inline.innerText);
+        if (inline.innerHTML !== parsed) {
+            inline.innerHTML = parsed;
+            restore(inline, selection, len);
+        }
     });
 }
 

@@ -179,8 +179,6 @@ h1, h2, h3 {
 }
 .mds {
   color: gray;
-  display: inline-block;
-  width: fit-content !important;
   /*opacity: 0.6;*/
   text-decoration: unset !important;
   font-weight: unset !important;
@@ -188,6 +186,10 @@ h1, h2, h3 {
 .st {
   color: #888;
   font-size: 0.7rem;
+}
+
+.inline-md {
+  white-space: pre-wrap
 }
 
 .page-wrapper {
