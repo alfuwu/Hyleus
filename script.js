@@ -24,7 +24,7 @@ const O = document.getElementById("s");
 const T = document.getElementById("tree");
 const Q = []; // {id: null, name: "Text", parent: null, description: "Markdown text", position: 1}
 const W = []; // {title: "Text", category: null, type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}
-const X = [];
+const X = new Set();
 
 const AR = document.getElementById("ar");
 //const BT = document.getElementById("by-type");
@@ -37,10 +37,12 @@ const HFR = document.getElementById("hierarchy-folder-context-menu");
 
 const CA = document.getElementById("categories");
 
+const AN = document.getElementById("article-title");
+const AT = document.getElementById("article-data");
 const AC = document.getElementById("article-category");
+const AD = document.getElementById("article-create");
 const AP = document.getElementById("article-password");
 const UP = document.getElementById("uap");
-const AD = document.getElementById("article-create");
 
 // article types
 const ARTICLE = 0; // normal article
@@ -250,7 +252,7 @@ async function processData(W, categories) {
     const files = {};
     for (const item of W) {
         const categoryPath = item.category ? categories[item.category].path : 'data';
-        if (X.indexOf(`${categoryPath}/${item.title}`.substring(5)) === -1)
+        if (!(`${categoryPath}/${item.title}`.substring(5) in X))
             continue; // don't add files if they haven't been changed
         const filePath = `${categoryPath}/${item.title}.hyl`;
         for (let i = 0; i < 5; i++) { // 5 encryption attempts (idk if encryption is the problem or what, but for some reason some encrypted files will randomly stop working, sooo)
@@ -267,7 +269,7 @@ async function processData(W, categories) {
 async function processCategories(categories) {
     const files = {};
     for (const id in categories) {
-        if (X.indexOf(id) === -1)
+        if (!(id in X))
             continue;
         const category = categories[id];
         const filePath = `${category.path}/category.info`;
@@ -405,14 +407,13 @@ function loadFile() {
         showContent(N);
         return;
     }
-    console.log(c);
     if (c.encrypted) {
         showContent(I);
     } else {
         switch (c.type) {
             case ARTICLE: {
                 showContent(B);
-                B.textContent = c.content;
+                B.innerHTML = permParse(c.content);
             }
         }
     }
@@ -434,19 +435,20 @@ function createTreeItem(text, dat) {
         });
         obj.addEventListener("contextmenu", event => showContextMenu(HFR, event));
     } else {
+        dat.obj = obj;
         obj.addEventListener("click", event => {
             if (event.button === 0) {
                 if (c)
                     c.obj.classList.remove("selected");
                 c = c === dat ? null : dat;
-                if (c) {
-                    c.obj = obj;
+                if (c)
                     obj.classList.add("selected");
-                }
                 loadFile();
             }
         });
         obj.addEventListener("contextmenu", event => showContextMenu(HFE, event));
+        if (c === dat)
+            obj.classList.add("selected");
     }
     return obj;
 }
@@ -457,7 +459,6 @@ function handleTreeItem(fof, categoryMap, iter=1) {
         if (fof.id in categoryMap) {
             children.classList.add("big", "padl", "hidden");
             for (const child of categoryMap[fof.id].sort((i1, i2) => i1.id && !i2.id ? -1 : i2.id && !i1.id ? 1 : i1.position !== i2.position ? i1.position - i2.position : i1.id && i2.id ? i1.name.localeCompare(i2.name) : i1.title.localeCompare(i2.title))) {
-                console.log(child.description)
                 const item = handleTreeItem(child, categoryMap, iter+1);
                 if (item instanceof Array) {
                     children.appendChild(item[0]);
@@ -496,15 +497,18 @@ function constructTree() {
             }
         }
     }
-    console.log(W.sort((i1, i2) => i1.position !== i2.position ? i1.position - i2.position : i1.title.localeCompare(i2.title)));
     for (const file of W.sort((i1, i2) => i1.position !== i2.position ? i1.position - i2.position : i1.title.localeCompare(i2.title)))
         if (!file.category)
             T.appendChild(handleTreeItem(file, undefined));
 }
 
 function constructCategoriesList() {
-    for (const child of Q)
-        CA.appendChild(document.createElement("option").appendChild(document.createTextNode(child.name)).parentElement);
+    for (const child of Q) {
+        const opt = document.createElement("option");
+        opt.value = child.id;
+        opt.appendChild(document.createTextNode(child.name))
+        CA.appendChild(opt);
+    }
 }
 
 function opacitate(ele, startOpac, endOpac) {
@@ -517,48 +521,6 @@ function opacitate(ele, startOpac, endOpac) {
         easing: "ease-in-out"
     });
 }
-
-S.addEventListener("input", () => {
-    Z.innerText = S.value ? "SEARCH FOR \"" + S.value.toUpperCase() + "\"" : "";
-});
-
-for (const m of MENUS)
-    if (m[1] !== L)
-        m[1].addEventListener("click", event => {
-            if (event.button === 0) {
-                M.classList.remove("hidden");
-                F.classList.remove("h");
-                m[0].classList.remove("hidden", "h");
-                opacitate(F, 0, 0.5);
-                opacitate(m[0], 0, 1);
-            }
-        });
-
-E.addEventListener("click", event => {
-    if (event.button === 0)
-        showContent(D);
-});
-
-L.addEventListener("click", event => {
-    if (event.button === 0) {
-        if (a !== null) {
-            a = null;
-            document.getElementsByName("adm").forEach(ele => ele.classList.add("hidden"));
-            localStorage.removeItem("hyleus-admin");
-        } else {
-            M.classList.remove("hidden");
-            F.classList.remove("h");
-            J.classList.remove("hidden", 'h');
-            opacitate(F, 0, 0.5);
-            opacitate(J, 0, 1);
-        }
-    }
-});
-
-F.addEventListener("click", event => {
-    if (event.button === 0)
-        closeMenus();
-})
 
 function closeMenus() {
     opacitate(F, 0.5, 0);
@@ -608,32 +570,8 @@ async function anonymous2() {
     }
 }
 
-UP.addEventListener("input", () => AP.disabled = UP.checked);
-
-P.addEventListener("keyup", event => { if (event.key === "Enter") anonymous(P.value) });
-U.addEventListener("click", event => { if (event.button === 0) anonymous(P.value) });
-
-O.addEventListener("keyup", event => { if (event.key === "Enter") anonymous2()});
-Y.addEventListener("click", event => { if (event.button === 0) anonymous2() });
-
-H.addEventListener("keyup", async (event) => {
-    if (event.key === "Enter" && c) {
-        try {
-            const data = await getEncryptionData(H.value, c.content);
-            c.salt = data.salt;
-            c.key = data.encKey;
-            c.iv = data.iv;
-            c.content = new TextDecoder().decode(decompress(new Uint8Array(data.key)));
-            c.encrypted = false;
-            loadFile();
-        } catch (e) {
-            console.warn(e);
-        }
-    }
-});
-
 function parse(text) {
-    return text
+    let md = text
         .replace(/</gm, "&lt;")
         .replace(/^(#{1,6}) (.+)$/gm, (_, header, content) => { return `<span class="h${header.length}"><span class="mds">${header}</span> ${content}</span>`; })
         .replace(/^-# (.+)$/gm, '<span class="st"><span class="mds"><b>-#</b></span> $1</span>')
@@ -643,6 +581,25 @@ function parse(text) {
         .replace(/(^|[^*\\])\*\*\*([^*]+?[^\\*])\*\*\*($|[^*])/gm, '$1<span class="mds">***</span><b><i>$2</i></b><span class="mds">***</span>$3') // italic bold text
         .replace(/(^|[^*\\])\*\*([^*]+?[^\\*])\*\*($|[^*])/gm, '$1<span class="mds">**</span><b>$2</b><span class="mds">**</span>$3') // bold text
         .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<span class="mds">*</span><i>$2</i><span class="mds">*</span>$3'); // italic text
+    for (const file of W)
+        md = md.replaceAll(`@${file.title}`, `<a data-text="@${file.title}"><span class="mds">@</span>${file.title}</a>`)
+    return md
+}
+
+function permParse(text) {
+    let md = text
+        .replace(/</gm, "&lt;")
+        .replace(/^(#{1,6}) (.+)$/gm, (_, header, content) => { return `<span class="h${header.length}" id="${content.replaceAll(" ", "-").toLowerCase()}">${content}</span>`; })
+        .replace(/^-# (.+)$/gm, '<span class="st">$1</span>')
+        .replace(/~~(.+?[^\\])~~/gm, '<s>$1</s>') // strikethrough
+        .replace(/(^|[^_\\])__([^_]+?[^\\_])__($|[^_])/gm, '$1<u>$2</u>$3') // underlined
+        .replace(/(^|[^_\\])_([^_]+?[^\\_])_($|[^_])/gm, '$1<i>$2</i>$3') // italic text
+        .replace(/(^|[^*\\])\*\*\*([^*]+?[^\\*])\*\*\*($|[^*])/gm, '$1<b><i>$2</i></b>$3') // italic bold text
+        .replace(/(^|[^*\\])\*\*([^*]+?[^\\*])\*\*($|[^*])/gm, '$1<b>$2</b>$3') // bold text
+        .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<i>$2</i>$3'); // italic text
+    for (let i = 0; i < W.length; i++)
+        md = md.replaceAll(`@${W[i].title}`, `<a onclick="W[${i}].obj.click();" data-text="${W[i].title}">${W[i].title}</a>`)
+    return md
 }
 
 function restore(context, selection, len) {
@@ -693,35 +650,8 @@ function diffStrings(oldStr, newStr) {
     return { added, deleted, start, endOld, endNew };
 }
 
-for (const inline of document.getElementsByClassName("inline-md")) {
-    let prevText = inline.innerText;
-    inline.addEventListener("input", () => { // god save my soul
-        const selection = window.getSelection();
-        const range = selection.getRangeAt(0);
-        range.setStart(inline, 0);
-        const rstr = range.toString();
-        let len = rstr.length;
-        range.collapse(false);
-        const diff = diffStrings(prevText, inline.innerText);
-        const added = diff.added;
-        prevText = inline.innerText;
-        
-        if (added[0] === "\n" && diff.deleted === "") { // evil hardcoded comparison hack (99% fail)
-            if (len === 0) {
-                inline.innerText = inline.innerText.substring(1);
-                restore(inline, selection, 1);
-            } else if (rstr[len - 1] === "\n") { // more evil code
-                inline.innerText = inline.innerText.substring(0, len - 1) + inline.innerText.substring(len);
-            }
-            len += 1;
-        }
-        
-        const parsed = parse(inline.innerText);
-        if (inline.innerHTML !== parsed) {
-            inline.innerHTML = parsed;
-            restore(inline, selection, len);
-        }
-    });
+function formatFileName(file, ret) {
+    return !file ? ret : file.id ? formatFileName(file.parent ? Q.find(v => v.id === file.parent) : null, file.name + "/" + ret) : formatFileName(file.category ? Q.find(v => v.id === file.category) : null, file.title);
 }
 
 if (guh !== null)
@@ -746,6 +676,7 @@ if (guh !== null)
     constructCategoriesList(); // important!! do this after constructTree, since constructTree sorts all categories
 })();
 
+// EVENTS
 document.addEventListener("click", () => {
     for (const ctxMenu of CONTEXT_MENUS)
         ctxMenu.classList.add("hidden");
@@ -756,3 +687,121 @@ document.addEventListener("contextmenu", event => {
         ctxMenu.classList.add("hidden");
 });
 HR.addEventListener("contextmenu", event => showContextMenu(HC, event));
+
+S.addEventListener("input", () => {
+    Z.innerText = S.value ? "SEARCH FOR \"" + S.value.toUpperCase() + "\"" : "";
+});
+
+for (const m of MENUS)
+    if (m[1] !== L)
+        m[1].addEventListener("click", event => {
+            if (event.button === 0) {
+                M.classList.remove("hidden");
+                F.classList.remove("h");
+                m[0].classList.remove("hidden", "h");
+                opacitate(F, 0, 0.5);
+                opacitate(m[0], 0, 1);
+            }
+        });
+
+E.addEventListener("click", event => { if (event.button === 0) showContent(D) });
+
+L.addEventListener("click", event => {
+    if (event.button === 0) {
+        if (a !== null) {
+            a = null;
+            document.getElementsByName("adm").forEach(ele => ele.classList.add("hidden"));
+            localStorage.removeItem("hyleus-admin");
+        } else {
+            M.classList.remove("hidden");
+            F.classList.remove("h");
+            J.classList.remove("hidden", 'h');
+            opacitate(F, 0, 0.5);
+            opacitate(J, 0, 1);
+        }
+    }
+});
+
+F.addEventListener("click", event => { if (event.button === 0) closeMenus() });
+
+UP.addEventListener("input", () => AP.disabled = UP.checked);
+AD.addEventListener("click", event => {
+    if (event.button === 0 && AN.value) {
+        const file = {
+            title: AN.value,
+            category: AC.value ? AC.value : null,
+            type: 0,
+            content: AT.innerText,
+            password: UP.checked ? guh : AP.value ? AP.value : null,
+            salt: undefined, key: undefined, iv: undefined,
+            encrypted: false,
+            position: 1
+        };
+        W.push(file);
+        X.add(formatFileName(file));
+        showContent(c ? B : N);
+        AN.value = "";
+        AC.value = "";
+        AT.innerText = "";
+        AP.value = "";
+        AN.classList.remove("warn");
+        constructTree();
+    } else if (!AN.value) {
+        AN.classList.add("warn");
+    }
+});
+
+P.addEventListener("keyup", event => { if (event.key === "Enter") anonymous(P.value) });
+U.addEventListener("click", event => { if (event.button === 0) anonymous(P.value) });
+
+O.addEventListener("keyup", event => { if (event.key === "Enter") anonymous2()});
+Y.addEventListener("click", event => { if (event.button === 0) anonymous2() });
+
+H.addEventListener("keyup", async (event) => {
+    if (event.key === "Enter" && c) {
+        try {
+            const data = await getEncryptionData(H.value, c.content);
+            c.salt = data.salt;
+            c.key = data.encKey;
+            c.iv = data.iv;
+            c.content = new TextDecoder().decode(decompress(new Uint8Array(data.key)));
+            c.encrypted = false;
+            loadFile();
+        } catch (e) {
+            console.warn(e);
+        }
+    }
+});
+
+for (const inline of document.getElementsByClassName("inline-md")) {
+    let prevText = inline.innerText;
+    // shift + enter is wack, so we just not gonna deal w it
+    inline.addEventListener("keydown", event => { if (event.key === "Enter" && event.shiftKey) event.preventDefault() });
+    inline.addEventListener("input", () => { // god save my soul
+        const selection = window.getSelection();
+        const range = selection.getRangeAt(0);
+        range.setStart(inline, 0);
+        const rstr = range.toString();
+        let len = rstr.length;
+        range.collapse();
+        const diff = diffStrings(prevText, inline.innerText);
+        const added = diff.added;
+        prevText = inline.innerText;
+        
+        if (added[0] === "\n" && diff.deleted === "") { // evil hardcoded comparison hack (99% fail)
+            if (len === 0) {
+                inline.innerText = inline.innerText.substring(1);
+                restore(inline, selection, 1);
+            } else if (rstr[len - 1] === "\n") { // more evil code
+                inline.innerText = inline.innerText.substring(0, len - 1) + inline.innerText.substring(len);
+            }
+            len += 1;
+        }
+        
+        const parsed = parse(inline.innerText);
+        if (inline.innerHTML !== parsed) {
+            inline.innerHTML = parsed;
+            restore(inline, selection, len);
+        }
+    });
+}

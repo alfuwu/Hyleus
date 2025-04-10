@@ -40,6 +40,7 @@ a {
   font-weight: bold;
   display: inline-block;
   outline: none;
+  cursor: pointer;
 }
 a::after {
   content: attr(data-text);
@@ -226,6 +227,9 @@ h1, h2, h3 {
 .inline-md {
   white-space: pre-wrap
 }
+.inline-md a {
+  display: unset;
+}
 
 .page-wrapper {
   position: absolute;
@@ -372,9 +376,10 @@ h1, h2, h3 {
   scroll-margin-top: 4rem;
 }
 #article {
-  align-items: stretch;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  overflow-y: auto;
   padding: 10px 80px;
-  justify-content: space-between;
   flex-flow: column nowrap;
   background: rgb(34, 34, 35);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3),
@@ -385,24 +390,24 @@ h1, h2, h3 {
   flex-direction: row;
 }
 #article-content {
-  position: relative;
   height: 100%;
-  flex-grow: 1;
+  width: 67%;
   margin-right: 15px;
 }
 #article-content > *, #article-metadata > *, .fil > * {
   width: 100%;
 }
-#article-content > div[contenteditable] {
+#article-data {
+  word-wrap: break-word;
   margin-top: 10px;
-  max-height: calc(100% - 40px - 3em);
+  height: calc(100% - 40px - 3em);
 }
 #article-content > input {
   font-size: 1.5em;
   min-height: 2em;
 }
 #article-metadata {
-  flex-grow: 0.5;
+  width: 33%;
   display: flex;
   flex-direction: column;
 }
