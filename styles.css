@@ -497,18 +497,15 @@ ol.nav {
   border-right: 3px solid rgba(255, 223, 186, 0.2);
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5);
 }
-
 ol.nav > li {
   padding: 0 0.5rem;
   margin: 3px 7px;
   border-radius: 6px;
   transition: filter 200ms ease-in-out, transform 200ms ease-in-out, color 200ms ease-in-out;
 }
-
 ol.nav > hr {
   margin: 7px 7px;
 }
-
 .nav a {
   display: block;
   text-align: center;
@@ -519,13 +516,11 @@ ol.nav > hr {
   border-radius: 6px;
   transition: color 200ms ease-in-out;
 }
-
 .nav a:hover {
   text-decoration: none;
   box-shadow: none;
   color: #fff;
 }
-
 .nav > li:hover {
   text-decoration: none;
   /*box-shadow: 0 0 10px rgba(255, 223, 186, 0.4);*/
@@ -533,7 +528,6 @@ ol.nav > hr {
   transform: scale(1.12);
   color: #fff;
 }
-
 .nav button,
 .nav button:hover,
 .ibtn,

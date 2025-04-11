@@ -103,21 +103,30 @@ Within are several declassified and classified excerpts detailing important peop
             <input type="text" placeholder="Commit message" id="s" autocomplete="off">
             <button id="save">Save</button>
         </div>
+        <div class="menu hidden h" id="folder-menu">
+            <h1>CREATE FOLDER</h1>
+            <label>Name</label>
+            <input type="text" placeholder="" id="folder-name" autocomplete="off">
+            <button id="create-folder">Create</button>
+        </div>
+        <div class="menu hidden h" id="loading">
+
+        </div>
     </div>
     </div>
     <div id="hierarchy-file-context-menu" class="ctx-menu hidden"><ul>
-        <li onclick="">Edit</li>
-        <li onclick="">Delete</li>
+        <li onclick="AT.innerHTML = d.encrypted ? '' : parse(d.content); AN.value = d.title; AC.value = d.category || ''; if (d.password === guh && !UP.checked) { d.password = ''; UP.click(); } else { if (UP.checked) UP.click(); AP.value = d.password || ''; } updateAD(); showContent(D);">Edit</li>
+        <li onclick="W.splice(W.indexOf(d), 1); DEL.add(formatFileName(d)); constructTree(); updateAD();">Delete</li>
     </ul></div>
     <div id="hierarchy-folder-context-menu" class="ctx-menu hidden"><ul>
-        <li onclick="">New Folder</li>
-        <li onclick="">New Article</li>
+        <li onclick="showFolderMenu();">New Folder</li>
+        <li onclick="showContent(D);">New Article</li>
         <li onclick="">Edit</li>
-        <li onclick="">Delete</li>
+        <li onclick="Q.splice(Q.indexOf(d), 1); DEL.add(formatFileName(d)); constructTree(); constructCategoriesList(); updateAD();">Delete</li>
     </ul></div>
     <div id="hierarchy-context-menu" class="ctx-menu hidden"><ul>
-        <li onclick="">New Folder</li>
-        <li onclick="">New Article</li>
+        <li onclick="showFolderMenu();">New Folder</li>
+        <li onclick="showContent(D);">New Article</li>
     </ul></div>
     <script type="text/javascript" src="script.js"></script>
 </body>

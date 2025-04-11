@@ -6,10 +6,6 @@ const C = document.getElementById("sbtn");
 const E = document.getElementById("cbtn");
 const V = document.getElementById("vbtn");
 const L = document.getElementById("abtn");
-const M = document.getElementById("menus");
-const K = document.getElementById("search-menu");
-const J = document.getElementById("admin-menu");
-const G = document.getElementById("save-menu");
 const P = document.getElementById("a");
 const U = document.getElementById("al");
 const F = document.getElementById("f");
@@ -25,6 +21,7 @@ const T = document.getElementById("tree");
 const Q = []; // {id: null, name: "Text", parent: null, description: "Markdown text", position: 1}
 const W = []; // {title: "Text", category: null, type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}
 const X = new Set();
+const DEL = new Set();
 
 const AR = document.getElementById("ar");
 //const BT = document.getElementById("by-type");
@@ -44,19 +41,25 @@ const AD = document.getElementById("article-create");
 const AP = document.getElementById("article-password");
 const UP = document.getElementById("uap");
 
+const M = document.getElementById("menus");
+const K = document.getElementById("search-menu");
+const J = document.getElementById("admin-menu");
+const G = document.getElementById("save-menu");
+const FM = document.getElementById("folder-menu");
+
 // article types
 const ARTICLE = 0; // normal article
 
-const MENUS = [[K, C], [J, L], [G, V]];
+const MENUS = [[K, C], [J, L], [G, V], [FM, null]];
 const CONTENTS = [N, B, I, D];
 const NAV_BUTTONS = [AR, /*BT,*/ MP];
 const CONTEXT_MENUS = [HC, HFE, HFR];
 
 let guh = localStorage.getItem("hyleus-admin");
 let a = null;
-let b = true;
+let b = true; // idr what this variable was for
 let c = null;
-Y.ariaDisabled = !b;
+let d = null;
 
 function compress(plainTextArray) {
     try {
@@ -344,7 +347,7 @@ async function decodeFile(path) {
     let encrypted = decomp[20] == 1;
     //const type = decomp[21];
     let text = decomp.slice(21);
-    let salt, key, iv;
+    let salt, key, iv, password;
     if (encrypted && guh) {
         try {
             const data = await getEncryptionData(guh, text);
@@ -353,6 +356,7 @@ async function decodeFile(path) {
             iv = data.iv;
             text = decompress(new Uint8Array(data.key));
             encrypted = false;
+            password = guh;
         } catch (e) {
             //console.warn(e);
         }
@@ -363,7 +367,7 @@ async function decodeFile(path) {
         type: 0,
         content: encrypted ? text : new TextDecoder().decode(text),
         tags: [],
-        salt, key, iv,
+        salt, key, iv, password,
         encrypted,
         position: new DataView(decomp.slice(16, 20).buffer).getUint32(0, true)
     };
@@ -419,21 +423,20 @@ function loadFile() {
     }
 }
 
-function createTreeItem(text, dat) {
-    const folder = dat instanceof HTMLElement;
+function createTreeItem(text, dat, children = null) {
     const obj = document.createElement("button");
     obj.classList.add("hflex", "left", "fold");
     const ico = document.createElement("img");
     ico.classList.add("smol", "inv", "ico", "padr");
-    ico.src = folder ? "folder.svg" : "article.svg";
+    ico.src = children ? "folder.svg" : "article.svg";
     obj.appendChild(ico);
     obj.appendChild(document.createTextNode(text));
-    if (folder) {
+    if (children) {
         obj.addEventListener("click", event => {
             if (event.button === 0)
-                dat.classList.toggle("hidden");
+                children.classList.toggle("hidden");
         });
-        obj.addEventListener("contextmenu", event => showContextMenu(HFR, event));
+        obj.addEventListener("contextmenu", event => { if (a) { d = dat; showContextMenu(HFR, event) } });
     } else {
         dat.obj = obj;
         obj.addEventListener("click", event => {
@@ -446,7 +449,7 @@ function createTreeItem(text, dat) {
                 loadFile();
             }
         });
-        obj.addEventListener("contextmenu", event => showContextMenu(HFE, event));
+        obj.addEventListener("contextmenu", event => { if (a) { d = dat; showContextMenu(HFE, event) } });
         if (c === dat)
             obj.classList.add("selected");
     }
@@ -468,7 +471,7 @@ function handleTreeItem(fof, categoryMap, iter=1) {
                 }
             }
         }
-        return [createTreeItem(fof.name, children), children];
+        return [createTreeItem(fof.name, fof, children), children];
     }
     return createTreeItem(fof.title, fof);
 }
@@ -505,8 +508,9 @@ function constructTree() {
 function constructCategoriesList() {
     for (const child of Q) {
         const opt = document.createElement("option");
-        opt.value = child.id;
-        opt.appendChild(document.createTextNode(child.name))
+        opt.value = formatFileName(child);
+        opt.value = opt.value.substring(0, opt.value.length - 1);
+        opt.textContent = child.id;
         CA.appendChild(opt);
     }
 }
@@ -565,6 +569,7 @@ async function anonymous2() {
     if (a && b) {
         const categories = buildCategoryStructure(Q);
         const files = { ...await processData(W, categories), ...await processCategories(categories) };
+        X.clear();
         await commitToGitHub(files, a);
         console.log("COMMITED");
     }
@@ -582,8 +587,8 @@ function parse(text) {
         .replace(/(^|[^*\\])\*\*([^*]+?[^\\*])\*\*($|[^*])/gm, '$1<span class="mds">**</span><b>$2</b><span class="mds">**</span>$3') // bold text
         .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<span class="mds">*</span><i>$2</i><span class="mds">*</span>$3'); // italic text
     for (const file of W)
-        md = md.replaceAll(`@${file.title}`, `<a data-text="@${file.title}"><span class="mds">@</span>${file.title}</a>`)
-    return md
+        md = md.replaceAll(`@${file.title}`, `<a data-text="@${file.title}"><span class="mds">@</span>${file.title}</a>`);
+    return md;
 }
 
 function permParse(text) {
@@ -598,8 +603,8 @@ function permParse(text) {
         .replace(/(^|[^*\\])\*\*([^*]+?[^\\*])\*\*($|[^*])/gm, '$1<b>$2</b>$3') // bold text
         .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<i>$2</i>$3'); // italic text
     for (let i = 0; i < W.length; i++)
-        md = md.replaceAll(`@${W[i].title}`, `<a onclick="W[${i}].obj.click();" data-text="${W[i].title}">${W[i].title}</a>`)
-    return md
+        md = md.replaceAll(`@${W[i].title}`, `<a onclick="W[${i}].obj.click();" data-text="${W[i].title}">${W[i].title}</a>`);
+    return md;
 }
 
 function restore(context, selection, len) {
@@ -619,9 +624,9 @@ function getTextNodeAtPosition(root, index) {
         }
         return NodeFilter.FILTER_ACCEPT;
     });
-    let c = treeWalker.nextNode();
+    const node = treeWalker.nextNode();
     return {
-        node: c ? c : root,
+        node: node ? node : root,
         position: index
     };
 }
@@ -650,8 +655,28 @@ function diffStrings(oldStr, newStr) {
     return { added, deleted, start, endOld, endNew };
 }
 
-function formatFileName(file, ret) {
+function findExisting() {
+    return W.findIndex(v => v.title === AN.value && v.category === (AC.value || null));
+}
+
+function updateAD() {
+    if (findExisting() !== -1) {
+        if (AD.textContent !== "Edit")
+            AD.textContent = "Edit";
+    } else if (AD.textContent !== "Create")
+        AD.textContent = "Create"
+}
+
+function formatFileName(file, ret = "") {
     return !file ? ret : file.id ? formatFileName(file.parent ? Q.find(v => v.id === file.parent) : null, file.name + "/" + ret) : formatFileName(file.category ? Q.find(v => v.id === file.category) : null, file.title);
+}
+
+function showFolderMenu() {
+    M.classList.remove("hidden");
+    F.classList.remove("h");
+    FM.classList.remove("hidden", "h");
+    opacitate(F, 0, 0.5);
+    opacitate(FM, 0, 1);
 }
 
 if (guh !== null)
@@ -678,22 +703,28 @@ if (guh !== null)
 
 // EVENTS
 document.addEventListener("click", () => {
-    for (const ctxMenu of CONTEXT_MENUS)
-        ctxMenu.classList.add("hidden");
+    if (a)
+        for (const ctxMenu of CONTEXT_MENUS)
+            ctxMenu.classList.add("hidden");
 });
-document.addEventListener("contextmenu", event => {
-    //event.preventDefault();
-    for (const ctxMenu of CONTEXT_MENUS)
-        ctxMenu.classList.add("hidden");
+document.addEventListener("contextmenu", () => {
+    if (a)
+        //event.preventDefault();
+        for (const ctxMenu of CONTEXT_MENUS)
+            ctxMenu.classList.add("hidden");
 });
-HR.addEventListener("contextmenu", event => showContextMenu(HC, event));
+window.addEventListener("beforeunload", event => {
+    if (a && (AN.value || AT.value || X.size > 0)) {
+        event.preventDefault();
+        event.returnValue = true;
+    }
+});
+HR.addEventListener("contextmenu", event => { if (a) showContextMenu(HC, event) });
 
-S.addEventListener("input", () => {
-    Z.innerText = S.value ? "SEARCH FOR \"" + S.value.toUpperCase() + "\"" : "";
-});
+S.addEventListener("input", () => Z.innerText = S.value ? "SEARCH FOR \"" + S.value.toUpperCase() + "\"" : "");
 
 for (const m of MENUS)
-    if (m[1] !== L)
+    if (m[1] !== L && m[1])
         m[1].addEventListener("click", event => {
             if (event.button === 0) {
                 M.classList.remove("hidden");
@@ -725,19 +756,25 @@ L.addEventListener("click", event => {
 F.addEventListener("click", event => { if (event.button === 0) closeMenus() });
 
 UP.addEventListener("input", () => AP.disabled = UP.checked);
+AN.addEventListener("input", () => { AN.value = AN.value.replaceAll("/", ""); updateAD() });
+AC.addEventListener("input", () => updateAD());
 AD.addEventListener("click", event => {
     if (event.button === 0 && AN.value) {
         const file = {
             title: AN.value,
-            category: AC.value ? AC.value : null,
+            category: AC.value || null,
             type: 0,
             content: AT.innerText,
-            password: UP.checked ? guh : AP.value ? AP.value : null,
+            password: UP.checked ? guh : AP.value || null,
             salt: undefined, key: undefined, iv: undefined,
             encrypted: false,
             position: 1
         };
-        W.push(file);
+        const existing = findExisting();
+        if (existing !== -1)
+            W[existing] = file;
+        else
+            W.push(file);
         X.add(formatFileName(file));
         showContent(c ? B : N);
         AN.value = "";
@@ -745,6 +782,8 @@ AD.addEventListener("click", event => {
         AT.innerText = "";
         AP.value = "";
         AN.classList.remove("warn");
+        if (UP.checked)
+            UP.click();
         constructTree();
     } else if (!AN.value) {
         AN.classList.add("warn");
@@ -757,7 +796,7 @@ U.addEventListener("click", event => { if (event.button === 0) anonymous(P.value
 O.addEventListener("keyup", event => { if (event.key === "Enter") anonymous2()});
 Y.addEventListener("click", event => { if (event.button === 0) anonymous2() });
 
-H.addEventListener("keyup", async (event) => {
+H.addEventListener("keyup", async event => {
     if (event.key === "Enter" && c) {
         try {
             const data = await getEncryptionData(H.value, c.content);
@@ -766,6 +805,7 @@ H.addEventListener("keyup", async (event) => {
             c.iv = data.iv;
             c.content = new TextDecoder().decode(decompress(new Uint8Array(data.key)));
             c.encrypted = false;
+            c.password = H.value;
             loadFile();
         } catch (e) {
             console.warn(e);
@@ -787,7 +827,6 @@ for (const inline of document.getElementsByClassName("inline-md")) {
         const diff = diffStrings(prevText, inline.innerText);
         const added = diff.added;
         prevText = inline.innerText;
-        
         if (added[0] === "\n" && diff.deleted === "") { // evil hardcoded comparison hack (99% fail)
             if (len === 0) {
                 inline.innerText = inline.innerText.substring(1);
