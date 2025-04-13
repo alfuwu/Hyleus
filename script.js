@@ -18,6 +18,7 @@ const H = document.getElementById("unencrypt");
 const Y = document.getElementById("save");
 const O = document.getElementById("s");
 const T = document.getElementById("tree");
+// folder.id is really quite useless, but it'd be a pain to remove it atp so it stays :shrug:
 const Q = []; // {id: null, name: "Text", parent: null, description: "Markdown text", position: 1}
 const W = []; // {title: "Text", category: null, type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}
 const X = new Set();
@@ -46,6 +47,13 @@ const K = document.getElementById("search-menu");
 const J = document.getElementById("admin-menu");
 const G = document.getElementById("save-menu");
 const FM = document.getElementById("folder-menu");
+const LO = document.getElementById("loading");
+
+const FH = document.getElementById("fold-head");
+const FN = document.getElementById("fold-name");
+const FC = document.getElementById("fold-parent");
+const FT = document.getElementById("fold-desc");
+const FD = document.getElementById("fold-create");
 
 // article types
 const ARTICLE = 0; // normal article
@@ -194,12 +202,12 @@ async function encodeAndEncrypt(content, category, type, password, salt, key, iv
     view.setUint8(20, encrypted || salt && key && iv || password ? 1 : 0);
     //view.setUint8(21, type || 0);
     const ret = compress(concatenate(new Uint8Array(buffer), data));
-    if (!encrypted) { // make sure that the data is decryptable
+    if (!encrypted && (salt && key && iv || password)) { // make sure that the data is decryptable
         const text = decompress(b64ToArr(arrToB64(ret))).slice(21);
         try {
             if (password)
                 await getEncryptionData(password, text);
-            else if (key && iv)
+            else
                 await crypto.subtle.decrypt(
                     { name: "AES-GCM", iv: iv, tagLength: 128 },
                     key,
@@ -243,7 +251,7 @@ function binaryToUuid(binary) {
 
 function generateUuid() {
     try {
-        return crypto.randomUUID().replace("-", "");
+        return crypto.randomUUID().replaceAll("-", "");
     } catch (e) {
         return "10000000100040008000100000000000".replace(/[018]/g, c =>
             (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
@@ -254,8 +262,10 @@ function generateUuid() {
 async function processData(W, categories) {
     const files = {};
     for (const item of W) {
-        const categoryPath = item.category ? categories[item.category].path : 'data';
-        if (!(`${categoryPath}/${item.title}`.substring(5) in X))
+        const categoryPath = item.category ? categories[item.category]?.path : 'data';
+        if (!categoryPath)
+            continue;
+        if (!X.has(`${categoryPath}/${item.title}`.substring(5)))
             continue; // don't add files if they haven't been changed
         const filePath = `${categoryPath}/${item.title}.hyl`;
         for (let i = 0; i < 5; i++) { // 5 encryption attempts (idk if encryption is the problem or what, but for some reason some encrypted files will randomly stop working, sooo)
@@ -272,7 +282,7 @@ async function processData(W, categories) {
 async function processCategories(categories) {
     const files = {};
     for (const id in categories) {
-        if (!(id in X))
+        if (!X.has(id))
             continue;
         const category = categories[id];
         const filePath = `${category.path}/category.info`;
@@ -289,19 +299,26 @@ async function processCategories(categories) {
 
 // this function won't work if there isn't already a commit in the repo
 async function commitToGitHub(files, token) {
-    if (Object.keys(files).length === 0) {
+    if (Object.keys(files).length + DEL.size === 0) {
         console.warn("Commit is empty; aborting");
         return; // don't create empty commits
     }
     const repo = 'alfuwu/Hyleus';
     const blobs = [];
+    const files2 = await (await fetch(`https://alfuwu.github.io/Hyleus/data/files.json`, {
+        method: 'GET'
+    })).json();
+    for (const path of DEL)
+        if (path.endsWith("/") && files2.indexOf(path + "category.info") !== -1 || files2.indexOf(path + ".hyl") !== -1) // don't delete categories or files that don't exist in the repo
+            blobs.push({ path: "data/" + (path.endsWith("/") ? path.slice(0, -1) : path + ".hyl"), mode: path.endsWith("/") ? "040000" : "100644", sha: null });
+    DEL.clear();
     for (const path in files) {
         const resp = await fetch(`https://api.github.com/repos/${repo}/git/blobs`, {
             method: 'POST',
             headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json', 'accept': 'application/vnd.github+json' },
             body: JSON.stringify({ content: arrToB64(new Uint8Array(files[path])), encoding: "base64" })
         });
-        blobs.push({path, mode: "100644", type: "blob", sha: (await resp.json()).sha});
+        blobs.push({ path, mode: "100644", type: "blob", sha: (await resp.json()).sha });
     }
     const baseTree = await fetch(`https://api.github.com/repos/${repo}/git/trees/master`, {
         method: 'GET',
@@ -335,7 +352,7 @@ function arrToB64(arr) {
 }
 
 function b64ToArr(b64) {
-    return new Uint8Array(atob(b64).map(c => c.charCodeAt(0)));
+    return new Uint8Array(atob(b64).split('').map(c => c.charCodeAt(0)));
 }
 
 async function decodeFile(path) {
@@ -506,10 +523,10 @@ function constructTree() {
 }
 
 function constructCategoriesList() {
+    CA.innerHTML = ``;
     for (const child of Q) {
         const opt = document.createElement("option");
-        opt.value = formatFileName(child);
-        opt.value = opt.value.substring(0, opt.value.length - 1);
+        opt.value = formatFileName(child).slice(0, -1);
         opt.textContent = child.id;
         CA.appendChild(opt);
     }
@@ -526,7 +543,7 @@ function opacitate(ele, startOpac, endOpac) {
     });
 }
 
-function closeMenus() {
+function closeMenus(fun = null) {
     opacitate(F, 0.5, 0);
     for (const m of MENUS)
         opacitate(m[0], 1, 0);
@@ -535,6 +552,8 @@ function closeMenus() {
         F.classList.add("h");
         for (const m of MENUS)
             m[0].classList.add("hidden", "h");
+        if (fun !== null)
+            fun();
     }, 200);
     P.value = "";
 }
@@ -567,11 +586,41 @@ function anonymous(txt, close=true) {
 
 async function anonymous2() {
     if (a && b) {
+        LO.classList.remove("h");
+        opacitate(LO, 0, 1);
         const categories = buildCategoryStructure(Q);
         const files = { ...await processData(W, categories), ...await processCategories(categories) };
         X.clear();
         await commitToGitHub(files, a);
         console.log("COMMITED");
+        opacitate(LO, 1, 0);
+        setTimeout(() => {
+            LO.classList.add("h");
+        }, 200);
+        closeMenus();
+    }
+}
+
+function anonymous3() {
+    if (FN.value) {
+        const folder = {
+            id: generateUuid(),
+            name: FN.value,
+            parent: findFolderByPath(FC.value)?.id || null,
+            description: FT.innerText,
+            position: 1
+        }
+        const existing = findExistingFold();
+        if (existing !== -1)
+            Q[existing] = folder;
+        else
+            Q.push(folder);
+        X.add(folder.id);
+        closeMenus(() => { FN.value = ""; FT.innerText = ""; FT.classList.add("phtxt"); FN.classList.remove("warn"); updateFD() });
+        constructTree();
+        constructCategoriesList();
+    } else if (!FN.value) {
+        FN.classList.add("warn");
     }
 }
 
@@ -582,28 +631,76 @@ function parse(text) {
         .replace(/^-# (.+)$/gm, '<span class="st"><span class="mds"><b>-#</b></span> $1</span>')
         .replace(/~~(.+?[^\\])~~/gm, '<span class="mds">~~</span><s>$1</s><span class="mds">~~</span>') // strikethrough
         .replace(/(^|[^_\\])__([^_]+?[^\\_])__($|[^_])/gm, '$1<span class="mds">__</span><u>$2</u><span class="mds">__</span>$3') // underlined
-        .replace(/(^|[^_\\])_([^_]+?[^\\_])_($|[^_])/gm, '$1<span class="mds">_</span><i>$2</i><span class="mds">_</span>$3') // italic text
+        .replace(/(^|[^_\\\w])_([^_]+?[^\\_])_($|[^_\w])/gmi, '$1<span class="mds">_</span><i>$2</i><span class="mds">_</span>$3') // italic text
         .replace(/(^|[^*\\])\*\*\*([^*]+?[^\\*])\*\*\*($|[^*])/gm, '$1<span class="mds">***</span><b><i>$2</i></b><span class="mds">***</span>$3') // italic bold text
         .replace(/(^|[^*\\])\*\*([^*]+?[^\\*])\*\*($|[^*])/gm, '$1<span class="mds">**</span><b>$2</b><span class="mds">**</span>$3') // bold text
-        .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<span class="mds">*</span><i>$2</i><span class="mds">*</span>$3'); // italic text
+        .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<span class="mds">*</span><i>$2</i><span class="mds">*</span>$3') // italic text
+        .replace(/(^|[^`\\])```([\s\S]+?[^`\\])```($|[^`])/gm, '$1<span class="mds">```</span><span class="multiline-code">$2</span><span class="mds">```</span>$3') // multiline code
+        .replace(/(^|[^`\\])`([^`]+?[^`\\])`($|[^`])/g, '$1<span class="mds">`</span><code>$2</code><span class="mds">`</span>$3') // code
+        .replace(/(^|[^\\])\|\|(.+?[^\\])\|\|/g, '$1<span class="mds">||</span><span class="spoiler-edit">$2</span><span class="mds">||</span>') // spoilers
+        .replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)|({https?:\/\/[^\s/$.?#].[^\s]*})|(https?:\/\/[^\s/$.?#].[^\s]*)/gm, (_, formatText, formatLink, inlineDataLink, link) => formatText && formatLink ? `<a data-text="[${formatText}](${formatLink})"><span class="mds">[</span>${formatText}<span class="mds">](${formatLink})</span></a>` : inlineDataLink ? `<span class="mds">{</span><a data-text="${inlineDataLink.slice(1, -1)}">${inlineDataLink.slice(1, -1)}</a><span class="mds">}</span>` : `<a data-text="${link}">${link}</a>`); // links must go last because of the data-text attribute
     for (const file of W)
-        md = md.replaceAll(`@${file.title}`, `<a data-text="@${file.title}"><span class="mds">@</span>${file.title}</a>`);
+        md = md.replaceAll(`@${file.title}`, `<a class="ref" data-text="@${file.title}"><span class="mds">@</span>${file.title}</a>`);
     return md;
 }
 
 function permParse(text) {
     let md = text
         .replace(/</gm, "&lt;")
-        .replace(/^(#{1,6}) (.+)$/gm, (_, header, content) => { return `<span class="h${header.length}" id="${content.replaceAll(" ", "-").toLowerCase()}">${content}</span>`; })
+        .replace(/^(#{1,6}) (.+)$/gm, (_, header, content) => `<span class="h${header.length}" id="${content.replaceAll(" ", "-").toLowerCase()}">${content}</span>`)
         .replace(/^-# (.+)$/gm, '<span class="st">$1</span>')
         .replace(/~~(.+?[^\\])~~/gm, '<s>$1</s>') // strikethrough
         .replace(/(^|[^_\\])__([^_]+?[^\\_])__($|[^_])/gm, '$1<u>$2</u>$3') // underlined
-        .replace(/(^|[^_\\])_([^_]+?[^\\_])_($|[^_])/gm, '$1<i>$2</i>$3') // italic text
+        .replace(/(^|[^_\\\w])_([^_]+?[^\\_])_($|[^_\w])/gm, '$1<i>$2</i>$3') // italic text
         .replace(/(^|[^*\\])\*\*\*([^*]+?[^\\*])\*\*\*($|[^*])/gm, '$1<b><i>$2</i></b>$3') // italic bold text
         .replace(/(^|[^*\\])\*\*([^*]+?[^\\*])\*\*($|[^*])/gm, '$1<b>$2</b>$3') // bold text
-        .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<i>$2</i>$3'); // italic text
+        .replace(/(^|[^*\\])\*([^*]+?[^\\*])\*($|[^*])/gm, '$1<i>$2</i>$3') // italic text
+        .replace(/```\n?([\s\S]+?)\n?```\n?/gm, '<pre><code>$1</code></pre>') // multiline code
+        .replace(/`([^`]+?)`/g, '<code>$1</code>') // code
+        .replace(/\|\|(.+?)\|\|/g, '<span class="spoiler">$1</span>') // spoilers
+        .replace(/(?:^|\n)((?:- .+(?:\n|$))+)/g, (_, list) =>
+            `<ul>${list.trim().split(/\n/).map(item => `<li>${item.replace(/^- /, '')}</li>`).join('')}</ul>`) // unordered lists
+        .replace(/(?:^|\n)((?:(\d+)\. .+(?:\n|$))+)/g, (_, list) =>
+            `<ol>${list.trim().split(/\n/).map(item => `<li>${item.replace(/^\d+\. /, '')}</li>`).join('')}</ol>`) // ordered lists
+        .replace(/(?:^|\n)((?:(?=[IVXLCDM]+\.)[IVXLCDM]+\. .+(?:\n|$))+)/gmi, (_, list) =>
+            `<ol type="I">${list.trim().split(/\n/).map(item => `<li>${item.replace(/^[IVXLCDM]+\. /i, '')}</li>`).join('')}</ol>`) // ordered lists (roman numerals)
+        .replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)|({https?:\/\/[^\s/$.?#].[^\s]*})|(https?:\/\/[^\s/$.?#].[^\s]*)/gm, (match, formatText, formatLink, inlineDataLink, link, offset, fullText) => {
+            if (formatText && formatLink) {
+                return `<a data-text="[${formatText}](${formatLink})"><span class="mds">[</span>${formatText}<span class="mds">](${formatLink})</span></a>`
+            } else if (inlineDataLink) {
+                const url = inlineDataLink.slice(1, -1);
+
+                const hasTextBefore = offset !== 0 && fullText[offset - 1] !== "\n"
+                const hasTextAfter = fullText.length > offset + match.length + 1 && fullText[offset + match.length + 1] !== "\n";
+
+                const determineFloatClass = () => hasTextBefore && !hasTextAfter ? "float-right" : hasTextAfter && !hasTextBefore ? "float-left" : hasTextBefore && hasTextAfter ? "" : "float-center";
+                
+                const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{11})/);
+                if (youtubeMatch)
+                    return `<iframe class="inline-embed ${determineFloatClass()}" src="https://www.youtube.com/embed/${youtubeMatch[1]}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+
+                if (url.includes("open.spotify.com"))
+                    return `<iframe class="inline-embed ${determineFloatClass()}" src="${url.replace("open.spotify.com", "open.spotify.com/embed")}" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>`;
+
+                if (url.includes("soundcloud.com"))
+                    return `<iframe class="inline-embed ${determineFloatClass()}" width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true&visual=false"></iframe>`;
+
+                const ext = url.split('.').pop().split('?')[0].toLowerCase();
+                if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg'].includes(ext) || url.startsWith("https://tenor.com/")) {
+                    return `<img src="${url}" class="inline-img ${determineFloatClass()}">`;
+                }  else if (['mp4', 'webm', 'ogv', 'mkv'].includes(ext)) {
+                    return `<video controls class="inline-video ${determineFloatClass()}"><source src="${url}" type="video/${ext}">Your browser does not support the video tag.</video>`;
+                } else if (['mp3', 'ogg', 'oga', 'wav', 'aac', 'flac', 'm4a'].includes(ext)) {
+                    return `<audio controls src="${url}" class="inline-audio ${determineFloatClass()}"></audio>`;
+                } else {
+                    return `<details class="inline-file"><summary>File Preview: ${url.split('/').pop().split('?')[0]}</summary><iframe src="${url}" sandbox class="file-preview-frame"></iframe></details>`;
+                }
+            } else {
+                return `<a href="${link}" data-text="${link}" target="_blank">${link}</a>`
+            }
+        }); // links
     for (let i = 0; i < W.length; i++)
-        md = md.replaceAll(`@${W[i].title}`, `<a onclick="W[${i}].obj.click();" data-text="${W[i].title}">${W[i].title}</a>`);
+        md = md.replaceAll(`@${W[i].title}`, `<a class="ref" onclick="W.find(v => v.title === '${W[i].title}' && v.category === ${W[i].category ? '\'' + W[i].category + '\'' : null}).obj.click();" data-text="${W[i].title}">${W[i].title}</a>`); 
     return md;
 }
 
@@ -656,7 +753,10 @@ function diffStrings(oldStr, newStr) {
 }
 
 function findExisting() {
-    return W.findIndex(v => v.title === AN.value && v.category === (AC.value || null));
+    return W.findIndex(v => v.title === AN.value && (formatFileName(v.category).slice(0, -1) || null) === (AC.value || null));
+}
+function findExistingFold() {
+    return Q.findIndex(v => v.name === FN.value && (formatFileName(v.parent).slice(0, -1) || null) === (FC.value || null));
 }
 
 function updateAD() {
@@ -666,12 +766,41 @@ function updateAD() {
     } else if (AD.textContent !== "Create")
         AD.textContent = "Create"
 }
+function updateFD() {
+    if (findExistingFold() !== -1) {
+        if (FD.textContent !== "Edit")
+            FD.textContent = "Edit";
+        if (FH.textContent !== "EDIT FOLDER")
+            FH.textContent = "EDIT FOLDER";
+    } else {
+        if (FD.textContent !== "Create")
+            FD.textContent = "Create";
+        if (FH.textContent !== "CREATE FOLDER")
+            FH.textContent = "CREATE FOLDER";
+    }
+}
 
 function formatFileName(file, ret = "") {
     return !file ? ret : file.id ? formatFileName(file.parent ? Q.find(v => v.id === file.parent) : null, file.name + "/" + ret) : formatFileName(file.category ? Q.find(v => v.id === file.category) : null, file.title);
 }
 
+function findFolderByPath(path) {
+    const segments = path.split("/");
+    let parentId = null;
+    let currentFolder = null;
+  
+    for (const name of segments) {
+        currentFolder = Q.find(v => v.name === name && v.parent === parentId);
+        if (!currentFolder)
+            return null;
+        parentId = currentFolder.id;
+    }
+  
+    return currentFolder;
+}
+
 function showFolderMenu() {
+    updateFD();
     M.classList.remove("hidden");
     F.classList.remove("h");
     FM.classList.remove("hidden", "h");
@@ -683,7 +812,7 @@ if (guh !== null)
     anonymous(guh);
 
 (async () => {
-    const files = await (await fetch("https://alfuwu.github.io/Hyleus/data/files.json", {
+    const files = await (await fetch(`https://alfuwu.github.io/Hyleus/data/files.json`, {
         method: 'GET'
     })).json();
     for (const file of files) {
@@ -762,7 +891,7 @@ AD.addEventListener("click", event => {
     if (event.button === 0 && AN.value) {
         const file = {
             title: AN.value,
-            category: AC.value || null,
+            category: findFolderByPath(AC.value)?.id || null,
             type: 0,
             content: AT.innerText,
             password: UP.checked ? guh : AP.value || null,
@@ -782,6 +911,7 @@ AD.addEventListener("click", event => {
         AT.innerText = "";
         AP.value = "";
         AN.classList.remove("warn");
+        updateAD();
         if (UP.checked)
             UP.click();
         constructTree();
@@ -789,6 +919,11 @@ AD.addEventListener("click", event => {
         AN.classList.add("warn");
     }
 });
+
+FN.addEventListener("input", () => { FN.value = FN.value.replaceAll("/", ""); updateFD() });
+FC.addEventListener("input", () => updateFD());
+FN.addEventListener("keyup", event => { if (event.key === "Enter") anonymous3() });
+FD.addEventListener("click", event => { if (event.button === 0) anonymous3() });
 
 P.addEventListener("keyup", event => { if (event.key === "Enter") anonymous(P.value) });
 U.addEventListener("click", event => { if (event.button === 0) anonymous(P.value) });
@@ -842,5 +977,16 @@ for (const inline of document.getElementsByClassName("inline-md")) {
             inline.innerHTML = parsed;
             restore(inline, selection, len);
         }
+    });
+}
+
+for (const placeholder of document.querySelectorAll("[data-placeholder]")) {
+    placeholder.classList.add("phtxt");
+    placeholder.addEventListener("input", () => {
+        if (placeholder.textContent === "\n" || !placeholder.textContent) {
+            placeholder.textContent = "";
+            placeholder.classList.add("phtxt");
+        } else if (placeholder.classList.contains("phtxt"))
+            placeholder.classList.remove("phtxt");
     });
 }

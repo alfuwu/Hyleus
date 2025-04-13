@@ -16,6 +16,7 @@ Within are several declassified and classified excerpts detailing important peop
     <script type="text/javascript" src="pako.js"></script>
 </head>
 <body>
+    <datalist id="categories"></datalist>
     <div class="page-wrapper">
     <ol class="nav">
         <li><button id="sbtn"><img src="search.svg" class="inv ico"></button></li>
@@ -57,7 +58,6 @@ Within are several declassified and classified excerpts detailing important peop
                 <div id="article-metadata">
                     <label>Category</label>
                     <input id="article-category" type="text" list="categories">
-                    <datalist id="categories"></datalist>
                     <label>Password</label>
                     <input id="article-password" type="text">
                     <div>
@@ -104,29 +104,30 @@ Within are several declassified and classified excerpts detailing important peop
             <button id="save">Save</button>
         </div>
         <div class="menu hidden h" id="folder-menu">
-            <h1>CREATE FOLDER</h1>
-            <label>Name</label>
-            <input type="text" placeholder="" id="folder-name" autocomplete="off">
-            <button id="create-folder">Create</button>
+            <h1 id="fold-head">CREATE FOLDER</h1>
+            <input id="fold-name" type="text" placeholder="Name" autocomplete="off">
+            <input id="fold-parent" type="text" placeholder="Parent" list="categories">
+            <div id="fold-desc" class="inline-md" data-placeholder="Description" contenteditable autocorrect spellcheck></div>
+            <button id="fold-create">Create</button>
         </div>
-        <div class="menu hidden h" id="loading">
-
-        </div>
+    </div>
+    <div class="h" id="loading">
+        <div class="loading-icon"></div>
     </div>
     </div>
     <div id="hierarchy-file-context-menu" class="ctx-menu hidden"><ul>
-        <li onclick="AT.innerHTML = d.encrypted ? '' : parse(d.content); AN.value = d.title; AC.value = d.category || ''; if (d.password === guh && !UP.checked) { d.password = ''; UP.click(); } else { if (UP.checked) UP.click(); AP.value = d.password || ''; } updateAD(); showContent(D);">Edit</li>
+        <li onclick="AT.innerHTML = d.encrypted ? '' : parse(d.content); AN.value = d.title; AC.value = formatFileName(d.category).slice(0, -1); if (d.password === guh) { d.password = ''; if (!UP.checked) UP.click(); } else { if (UP.checked) UP.click(); AP.value = d.password || ''; } updateAD(); showContent(D);">Edit</li>
         <li onclick="W.splice(W.indexOf(d), 1); DEL.add(formatFileName(d)); constructTree(); updateAD();">Delete</li>
     </ul></div>
     <div id="hierarchy-folder-context-menu" class="ctx-menu hidden"><ul>
-        <li onclick="showFolderMenu();">New Folder</li>
-        <li onclick="showContent(D);">New Article</li>
-        <li onclick="">Edit</li>
-        <li onclick="Q.splice(Q.indexOf(d), 1); DEL.add(formatFileName(d)); constructTree(); constructCategoriesList(); updateAD();">Delete</li>
+        <li onclick="FT.innerHTML = ''; FT.classList.add('phtxt'); FN.value = ''; FC.value = formatFileName(d).slice(0, -1); showFolderMenu();">New Folder</li>
+        <li onclick="AT.innerHTML = ''; AN.value = ''; AC.value = formatFileName(d).slice(0, -1); if (UP.checked) UP.click(); AP.value = ''; updateAD(); showContent(D);">New Article</li>
+        <li onclick="FT.innerHTML = parse(d.description); if (FT.innerHTML) FT.classList.remove('phtxt'); else FT.classList.add('phtxt'); FN.value = d.name; FC.value = formatFileName(Q.find(v => v.id === d.parent)).slice(0, -1) || ''; showFolderMenu();">Edit</li>
+        <li onclick="Q.splice(Q.indexOf(d), 1); DEL.add(formatFileName(d)); W.filter(v => v.category === d.id); constructTree(); constructCategoriesList(); updateAD();">Delete</li>
     </ul></div>
     <div id="hierarchy-context-menu" class="ctx-menu hidden"><ul>
-        <li onclick="showFolderMenu();">New Folder</li>
-        <li onclick="showContent(D);">New Article</li>
+        <li onclick="FT.innerHTML = ''; FT.classList.add('phtxt'); FN.value = ''; FC.value = ''; showFolderMenu();">New Folder</li>
+        <li onclick="AT.innerHTML = ''; AN.value = ''; AC.value = ''; if (UP.checked) UP.click(); AP.value = ''; updateAD(); showContent(D);">New Article</li>
     </ul></div>
     <script type="text/javascript" src="script.js"></script>
 </body>
