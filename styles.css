@@ -381,6 +381,16 @@ code {
   align-items: center;
 }
 
+.yuh {
+  text-align: left;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.mq {
+  padding-left: 100%;
+  animation: scroll-marquee 8s linear infinite;
+}
+
 .padl { padding-left: 5px; }
 .padr { padding-right: 5px; }
 .padb { padding-bottom: 5px; }
@@ -453,7 +463,6 @@ code {
 #article, #create-form {
   overflow-y: auto;
   width: 100%;
-  max-width: 960px;
   margin: 20px 0 0 0;
   min-height: calc(100vh - 40px);
   height: calc(100vh - 40px);
@@ -463,6 +472,7 @@ code {
   word-wrap: break-word;
   white-space: pre-wrap;
   overflow-y: auto;
+  max-width: 960px;
   padding: 10px 80px;
   flex-flow: column nowrap;
   background: rgb(34, 34, 35);
@@ -472,6 +482,7 @@ code {
 #create-form {
   display: flex;
   padding: 10px;
+  max-width: 1260px;
   flex-direction: row;
 }
 #article-content {
@@ -492,6 +503,7 @@ code {
   min-height: 2em;
 }
 #article-metadata {
+  margin-left: 15px;
   width: 33%;
   display: flex;
   flex-direction: column;
@@ -692,7 +704,7 @@ ol.nav > hr {
 }
 
 @media only screen and (max-width: 650px), (orientation: portrait) {
-  ol.nav {
+  /*ol.nav {
     overflow-x: auto;
     overflow-y: hidden;
     width: 100%;
@@ -716,7 +728,7 @@ ol.nav > hr {
   .page {
     left: 0px;
     top: 45px;
-  }
+  }*/
 
   #hierarchy {
     position: absolute;
@@ -776,4 +788,9 @@ ol.nav > hr {
 @keyframes spin {
   0% { transform: rotate(0deg);}
   100% { transform: rotate(360deg); }
+}
+
+@keyframes scroll-marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(var(--width)); }
 }

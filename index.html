@@ -116,7 +116,7 @@ Within are several declassified and classified excerpts detailing important peop
     </div>
     </div>
     <div id="hierarchy-file-context-menu" class="ctx-menu hidden"><ul>
-        <li onclick="AT.innerHTML = d.encrypted ? '' : parse(d.content); AN.value = d.title; AC.value = formatFileName(d.category).slice(0, -1); if (d.password === guh) { d.password = ''; if (!UP.checked) UP.click(); } else { if (UP.checked) UP.click(); AP.value = d.password || ''; } updateAD(); showContent(D);">Edit</li>
+        <li onclick="AT.innerHTML = d.encrypted ? '' : parse(d.content); AN.value = d.title; AC.value = formatFileName(Q.find(v => v.id === d.category)).slice(0, -1); if (d.password === guh) { AP.value = ''; if (!UP.checked) UP.click(); } else { if (UP.checked) UP.click(); AP.value = d.password || ''; } updateAD(); showContent(D);">Edit</li>
         <li onclick="W.splice(W.indexOf(d), 1); DEL.add(formatFileName(d)); constructTree(); updateAD();">Delete</li>
     </ul></div>
     <div id="hierarchy-folder-context-menu" class="ctx-menu hidden"><ul>

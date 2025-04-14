@@ -19,8 +19,8 @@ const Y = document.getElementById("save");
 const O = document.getElementById("s");
 const T = document.getElementById("tree");
 // folder.id is really quite useless, but it'd be a pain to remove it atp so it stays :shrug:
-const Q = []; // {id: null, name: "Text", parent: null, description: "Markdown text", position: 1}
-const W = []; // {title: "Text", category: null, type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}
+let Q = []; // {id: null, name: "Text", parent: null, description: "Markdown text", position: 1}
+let W = []; // {title: "Text", category: null, type: 0, content: "Markdown text", password: null, salt: undefined, key: undefined, iv: undefined, encrypted: false, position: 1}
 const X = new Set();
 const DEL = new Set();
 
@@ -62,6 +62,19 @@ const MENUS = [[K, C], [J, L], [G, V], [FM, null]];
 const CONTENTS = [N, B, I, D];
 const NAV_BUTTONS = [AR, /*BT,*/ MP];
 const CONTEXT_MENUS = [HC, HFE, HFR];
+
+const MARQUEE = new ResizeObserver(entries => {
+    for (let entry of entries) {
+        if (entry.target.scrollWidth > entry.contentRect.width) {
+            entry.target.style.setProperty("--width", `-${entry.target.scrollWidth + 5}px`);
+            entry.target.classList.add("mq");
+        } else {
+            entry.target.classList.remove("mq");
+        }
+    }
+});
+
+let paths = [];
 
 let guh = localStorage.getItem("hyleus-admin");
 let a = null;
@@ -221,15 +234,18 @@ async function encodeAndEncrypt(content, category, type, password, salt, key, iv
     return ret;
 }
 
+function buildCategoryPath(categories, name, parent) {
+    if (parent && !categories[parent].path)
+        categories[parent].path = buildCategoryPath(categories, categories[parent].name, categories[parent].parent);
+    return `${parent ? categories[parent].path : "data"}/${name}`;
+}
+
 function buildCategoryStructure(Q) {
     const categories = {};
     Q.forEach(({ id, name, parent, description, position }) => {
-        categories[id] = { name, parent, description, path: parent ? null : `data/${name}`, position };
+        categories[id] = { name, parent, description, path: null, position };
     });
-    Object.values(categories).forEach(category => {
-        if (category.parent)
-            category.path = `${categories[category.parent].path}/${category.name}`;
-    });
+    Object.values(categories).forEach(category => category.path = buildCategoryPath(categories, category.name, category.parent));
     return categories;
 }
 
@@ -299,17 +315,18 @@ async function processCategories(categories) {
 
 // this function won't work if there isn't already a commit in the repo
 async function commitToGitHub(files, token) {
-    if (Object.keys(files).length + DEL.size === 0) {
+    if (Object.keys(files).filter(v => !DEL.has(v)).length + [...DEL].filter(v => !files.includes(v)).length === 0) {
+        DEL.clear();
         console.warn("Commit is empty; aborting");
         return; // don't create empty commits
     }
     const repo = 'alfuwu/Hyleus';
     const blobs = [];
-    const files2 = await (await fetch(`https://alfuwu.github.io/Hyleus/data/files.json`, {
+    paths = await (await fetch(`https://alfuwu.github.io/Hyleus/data/files.json`, {
         method: 'GET'
     })).json();
     for (const path of DEL)
-        if (path.endsWith("/") && files2.indexOf(path + "category.info") !== -1 || files2.indexOf(path + ".hyl") !== -1) // don't delete categories or files that don't exist in the repo
+        if (path.endsWith("/") && paths.indexOf(path + "category.info") !== -1 || paths.indexOf(path + ".hyl") !== -1) // don't delete categories or files that don't exist in the repo
             blobs.push({ path: "data/" + (path.endsWith("/") ? path.slice(0, -1) : path + ".hyl"), mode: path.endsWith("/") ? "040000" : "100644", sha: null });
     DEL.clear();
     for (const path in files) {
@@ -418,9 +435,9 @@ function showContextMenu(ele, event) {
     }
     for (const ctxMenu of CONTEXT_MENUS)
         ctxMenu.classList.add("hidden");
-    ele.classList.remove("hidden");
     ele.style.left = event.pageX + "px";
     ele.style.top = event.pageY  + "px";
+    ele.classList.remove("hidden");
 }
 
 function loadFile() {
@@ -434,101 +451,176 @@ function loadFile() {
         switch (c.type) {
             case ARTICLE: {
                 showContent(B);
-                B.innerHTML = permParse(c.content);
+                B.innerHTML = `<h1>${c.title}</h1><hr>\n${permParse(c.content)}`;
             }
         }
+    }
+}
+
+async function loadFold() {
+    const existing = Q.find(v => v.name === d.name && v.path === d.path);
+    const decoded = !existing || !existing.id ? await decodeDir(d.path + "category.info") : null;
+    if (decoded) {
+        console.log("CATEGORY", decoded);
+        if (existing)
+            Object.assign(existing, {
+                ...decoded
+            });
+        else
+            Q.push(await decodeDir(d.path + "category.info"));
+    }
+}
+
+async function loadCat(cat) {
+    let prev = "";
+    for (const dir of cat) {
+        prev += dir + "/";
+        const existing = Q.find(v => v.name === dir && (v.path === prev));
+        const decoded = !existing || !existing.id ? await decodeDir(prev + "category.info") : null;
+        if (decoded) {
+            console.log("CATEGORY", decoded);
+            if (existing)
+                Object.assign(existing, {
+                    ...decoded
+                });
+            else
+                Q.push(await decodeDir(prev + "category.info"));
+        }
+    }
+}
+
+async function loadDat(dat) {
+    if (dat.path) {
+        const decoded = await decodeFile(dat.path);
+        if (dat.path.includes("/"))
+            await loadCat(dat.path.split("/").slice(0, -1));
+        delete dat.path;
+        Object.assign(dat, {
+            ...decoded
+        });
+        console.log("FILE", dat);
     }
 }
 
 function createTreeItem(text, dat, children = null) {
     const obj = document.createElement("button");
     obj.classList.add("hflex", "left", "fold");
+
     const ico = document.createElement("img");
     ico.classList.add("smol", "inv", "ico", "padr");
     ico.src = children ? "folder.svg" : "article.svg";
+
+    const wrapper = document.createElement("div");
+    wrapper.classList.add("yuh");
+    const txt = document.createElement("div");
+    txt.textContent = text;
+
+    wrapper.appendChild(txt);
+    
+    MARQUEE.observe(txt);
+
     obj.appendChild(ico);
-    obj.appendChild(document.createTextNode(text));
+    obj.appendChild(wrapper);
     if (children) {
+        const existing = Q.find(v => formatFileName(v) === dat.path);
+        if (existing)
+            dat = existing;
+        else
+            Q.push(dat);
         obj.addEventListener("click", event => {
             if (event.button === 0)
                 children.classList.toggle("hidden");
         });
-        obj.addEventListener("contextmenu", event => { if (a) { d = dat; showContextMenu(HFR, event) } });
+        obj.addEventListener("contextmenu", async event => { if (a) { d = dat; showContextMenu(HFR, event); await loadFold() } });
     } else {
         dat.obj = obj;
-        obj.addEventListener("click", event => {
+        W.push(dat);
+        obj.addEventListener("click", async event => {
             if (event.button === 0) {
                 if (c)
                     c.obj.classList.remove("selected");
                 c = c === dat ? null : dat;
-                if (c)
+                if (c) {
                     obj.classList.add("selected");
+                    await loadDat(dat);
+                }
                 loadFile();
             }
         });
-        obj.addEventListener("contextmenu", event => { if (a) { d = dat; showContextMenu(HFE, event) } });
+        obj.addEventListener("contextmenu", async event => { if (a) { d = dat; showContextMenu(HFE, event); await loadDat(dat) } });
         if (c === dat)
             obj.classList.add("selected");
     }
     return obj;
 }
 
-function handleTreeItem(fof, categoryMap, iter=1) {
-    if (fof.id) { // folder
-        const children = document.createElement("div");
-        if (fof.id in categoryMap) {
-            children.classList.add("big", "padl", "hidden");
-            for (const child of categoryMap[fof.id].sort((i1, i2) => i1.id && !i2.id ? -1 : i2.id && !i1.id ? 1 : i1.position !== i2.position ? i1.position - i2.position : i1.id && i2.id ? i1.name.localeCompare(i2.name) : i1.title.localeCompare(i2.title))) {
-                const item = handleTreeItem(child, categoryMap, iter+1);
-                if (item instanceof Array) {
-                    children.appendChild(item[0]);
-                    children.appendChild(item[1]);
-                } else {
-                    children.appendChild(item);
+function handleTreeFromPath(name, subtree, path = "") {
+    if (subtree.path || subtree.title)
+        return createTreeItem(name.slice(0, -4), subtree);
+
+    const children = document.createElement("div");
+    children.classList.add("big", "padl", "hidden");
+
+    for (const key of Object.keys(subtree).sort()) {
+        const item = handleTreeFromPath(key, subtree[key], path + name + "/");
+        if (item instanceof Array) {
+            children.appendChild(item[0]);
+            children.appendChild(item[1]);
+        } else {
+            children.appendChild(item);
+        }
+    }
+
+    const folderData = { name, path: (path || "") + name + "/" };
+    return [createTreeItem(name, folderData, children), children];
+}
+
+function buildPathTree(paths) {
+    const root = {};
+    for (const path of paths) {
+        const parts = path.split("/");
+        let current = root;
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i];
+            if (i === parts.length - 1) {
+                if (path.endsWith(".hyl")) {
+                    const existing = W.find(v => v.title === path.split("/").pop().slice(0, -4) && formatFileName(Q.find(q => q.id === v.category)).slice(0, -1) === path.split("/").slice(0, -1).join("/"));
+                    current[part] = existing || { path };
                 }
+            } else {
+                if (!current[part]) current[part] = {};
+                current = current[part];
             }
         }
-        return [createTreeItem(fof.name, fof, children), children];
     }
-    return createTreeItem(fof.title, fof);
+    W = [];
+    return root;
 }
 
 function constructTree() {
-    T.innerHTML = ``; // remove all children
-    const categoryMap = W.reduce((acc, item) => {
-        if (!acc[item.category])
-            acc[item.category] = [];
-        acc[item.category].push(item);
-        return acc;
-    }, {});
-    Q.forEach(item => {
-        if (item.parent) {
-            if (!categoryMap[item.parent])
-                categoryMap[item.parent] = [];
-            categoryMap[item.parent].unshift(item);
-        }
-    });
-    for (const folder of Q.sort((i1, i2) => i1.position !== i2.position ? i1.position - i2.position : i1.name.localeCompare(i2.name))) {
-        if (!folder.parent) {
-            const item = handleTreeItem(folder, categoryMap);
-            if (item) {
-                T.appendChild(item[0]);
-                T.appendChild(item[1]);
-            }
+    const pathTree = buildPathTree(paths);
+
+    T.innerHTML = ``;
+    for (const [name, subtree] of Object.entries(pathTree)) {
+        const item = handleTreeFromPath(name, subtree);
+        if (item instanceof Array) {
+            T.appendChild(item[0]);
+            T.appendChild(item[1]);
+        } else {
+            T.appendChild(item);
         }
     }
-    for (const file of W.sort((i1, i2) => i1.position !== i2.position ? i1.position - i2.position : i1.title.localeCompare(i2.title)))
-        if (!file.category)
-            T.appendChild(handleTreeItem(file, undefined));
+    Q = [];
 }
 
 function constructCategoriesList() {
     CA.innerHTML = ``;
-    for (const child of Q) {
-        const opt = document.createElement("option");
-        opt.value = formatFileName(child).slice(0, -1);
-        opt.textContent = child.id;
-        CA.appendChild(opt);
+    for (const child of paths) {
+        if (child.endsWith("/category.info")) {
+            const opt = document.createElement("option");
+            opt.value = child.slice(0, -14);
+            CA.appendChild(opt);
+        }
     }
 }
 
@@ -616,6 +708,7 @@ function anonymous3() {
         else
             Q.push(folder);
         X.add(folder.id);
+        paths.push(formatFileName(folder) + "category.info");
         closeMenus(() => { FN.value = ""; FT.innerText = ""; FT.classList.add("phtxt"); FN.classList.remove("warn"); updateFD() });
         constructTree();
         constructCategoriesList();
@@ -639,8 +732,19 @@ function parse(text) {
         .replace(/(^|[^`\\])`([^`]+?[^`\\])`($|[^`])/g, '$1<span class="mds">`</span><code>$2</code><span class="mds">`</span>$3') // code
         .replace(/(^|[^\\])\|\|(.+?[^\\])\|\|/g, '$1<span class="mds">||</span><span class="spoiler-edit">$2</span><span class="mds">||</span>') // spoilers
         .replace(/\[(.*?)\]\((https?:\/\/[^\s)]+)\)|({https?:\/\/[^\s/$.?#].[^\s]*})|(https?:\/\/[^\s/$.?#].[^\s]*)/gm, (_, formatText, formatLink, inlineDataLink, link) => formatText && formatLink ? `<a data-text="[${formatText}](${formatLink})"><span class="mds">[</span>${formatText}<span class="mds">](${formatLink})</span></a>` : inlineDataLink ? `<span class="mds">{</span><a data-text="${inlineDataLink.slice(1, -1)}">${inlineDataLink.slice(1, -1)}</a><span class="mds">}</span>` : `<a data-text="${link}">${link}</a>`); // links must go last because of the data-text attribute
-    for (const file of W)
-        md = md.replaceAll(`@${file.title}`, `<a class="ref" data-text="@${file.title}"><span class="mds">@</span>${file.title}</a>`);
+    const refMap = {};
+    Object.values(paths).forEach(path => {
+        if (path.endsWith(".hyl")) {
+            const fileName = path.split("/").pop();
+            const key = fileName.slice(0, -4);
+            const dir = path.split("/").slice(0, -1).join("/");
+            const replacement = `<a class="ref" data-text="@${key}"><span class="mds">@</span>${key}</a>`;
+            refMap[key] = replacement;
+        }
+    });
+    const sortedKeys = Object.keys(refMap).sort((a, b) => b.length - a.length);
+    const regex = new RegExp(`@(${sortedKeys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'g');
+    md = md.replace(regex, (_, match) => refMap[match]);
     return md;
 }
 
@@ -699,8 +803,19 @@ function permParse(text) {
                 return `<a href="${link}" data-text="${link}" target="_blank">${link}</a>`
             }
         }); // links
-    for (let i = 0; i < W.length; i++)
-        md = md.replaceAll(`@${W[i].title}`, `<a class="ref" onclick="W.find(v => v.title === '${W[i].title}' && v.category === ${W[i].category ? '\'' + W[i].category + '\'' : null}).obj.click();" data-text="${W[i].title}">${W[i].title}</a>`); 
+    const refMap = {};
+    Object.values(paths).forEach(path => {
+        if (path.endsWith(".hyl")) {
+            const fileName = path.split("/").pop();
+            const key = fileName.slice(0, -4);
+            const dir = path.split("/").slice(0, -1).join("/");
+            const replacement = `<a class="ref" onclick="if (c === null || c.title !== '${key}' && formatFileName(Q.find(q => q.id === c.category)) !== '${dir}/') W.find(v => v.title === '${key}' && formatFileName(Q.find(q => q.id === v.category)) === '${dir}/' || v.path && v.path.split('/').pop() === '${fileName}').obj.click();" data-text="${key}">${key}</a>`;
+            refMap[key] = replacement;
+        }
+    });
+    const sortedKeys = Object.keys(refMap).sort((a, b) => b.length - a.length);
+    const regex = new RegExp(`@(${sortedKeys.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})\\b`, 'g');
+    md = md.replace(regex, (_, match) => refMap[match]);
     return md;
 }
 
@@ -753,10 +868,10 @@ function diffStrings(oldStr, newStr) {
 }
 
 function findExisting() {
-    return W.findIndex(v => v.title === AN.value && (formatFileName(v.category).slice(0, -1) || null) === (AC.value || null));
+    return W.findIndex(v => v.title === AN.value && (formatFileName(Q.find(q => q.id === v.category)).slice(0, -1) === AC.value || v.path && v.path.split("/").slice(0, -1).join("/") === AC.value || v.path === AC.value));
 }
 function findExistingFold() {
-    return Q.findIndex(v => v.name === FN.value && (formatFileName(v.parent).slice(0, -1) || null) === (FC.value || null));
+    return Q.findIndex(v => v.name === FN.value && formatFileName(Q.find(q => q.id === v.parent)).slice(0, -1) === FC.value);
 }
 
 function updateAD() {
@@ -784,8 +899,9 @@ function formatFileName(file, ret = "") {
     return !file ? ret : file.id ? formatFileName(file.parent ? Q.find(v => v.id === file.parent) : null, file.name + "/" + ret) : formatFileName(file.category ? Q.find(v => v.id === file.category) : null, file.title);
 }
 
-function findFolderByPath(path) {
+async function findFolderByPath(path) {
     const segments = path.split("/");
+    await loadCat(segments);
     let parentId = null;
     let currentFolder = null;
   
@@ -812,22 +928,9 @@ if (guh !== null)
     anonymous(guh);
 
 (async () => {
-    const files = await (await fetch(`https://alfuwu.github.io/Hyleus/data/files.json`, {
-        method: 'GET'
-    })).json();
-    for (const file of files) {
-        if (file.endsWith(".hyl")) {
-            const decoded = await decodeFile(file);
-            console.log("FILE", decoded);
-            W.push(decoded);
-        } else if (file.endsWith("/category.info")) {
-            const decoded = await decodeDir(file);
-            console.log("CATEGORY", decoded);
-            Q.push(decoded);
-        }
-    }
+    paths = await (await fetch(`https://alfuwu.github.io/Hyleus/data/files.json`)).json();
     constructTree();
-    constructCategoriesList(); // important!! do this after constructTree, since constructTree sorts all categories
+    constructCategoriesList();
 })();
 
 // EVENTS
@@ -904,7 +1007,9 @@ AD.addEventListener("click", event => {
             W[existing] = file;
         else
             W.push(file);
-        X.add(formatFileName(file));
+        const fileName = formatFileName(file);
+        X.add(fileName);
+        paths.push(fileName);
         showContent(c ? B : N);
         AN.value = "";
         AC.value = "";
