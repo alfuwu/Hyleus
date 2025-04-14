@@ -117,13 +117,13 @@ Within are several declassified and classified excerpts detailing important peop
     </div>
     <div id="hierarchy-file-context-menu" class="ctx-menu hidden"><ul>
         <li onclick="AT.innerHTML = d.encrypted ? '' : parse(d.content); AN.value = d.title; AC.value = formatFileName(Q.find(v => v.id === d.category)).slice(0, -1); if (d.password === guh) { AP.value = ''; if (!UP.checked) UP.click(); } else { if (UP.checked) UP.click(); AP.value = d.password || ''; } updateAD(); showContent(D);">Edit</li>
-        <li onclick="W.splice(W.indexOf(d), 1); DEL.add(formatFileName(d)); constructTree(); updateAD();">Delete</li>
+        <li onclick="W.splice(W.indexOf(d), 1); const formatted = formatFileName(d) || d.path; if (!formatted) return; paths.splice(paths.findIndex(v => v === formatted), 1); DEL.add(formatted); constructTree(); updateAD();">Delete</li>
     </ul></div>
     <div id="hierarchy-folder-context-menu" class="ctx-menu hidden"><ul>
         <li onclick="FT.innerHTML = ''; FT.classList.add('phtxt'); FN.value = ''; FC.value = formatFileName(d).slice(0, -1); showFolderMenu();">New Folder</li>
         <li onclick="AT.innerHTML = ''; AN.value = ''; AC.value = formatFileName(d).slice(0, -1); if (UP.checked) UP.click(); AP.value = ''; updateAD(); showContent(D);">New Article</li>
         <li onclick="FT.innerHTML = parse(d.description); if (FT.innerHTML) FT.classList.remove('phtxt'); else FT.classList.add('phtxt'); FN.value = d.name; FC.value = formatFileName(Q.find(v => v.id === d.parent)).slice(0, -1) || ''; showFolderMenu();">Edit</li>
-        <li onclick="Q.splice(Q.indexOf(d), 1); DEL.add(formatFileName(d)); W.filter(v => v.category === d.id); constructTree(); constructCategoriesList(); updateAD();">Delete</li>
+        <li onclick="Q.splice(Q.indexOf(d), 1); const formatted2 = formatFileName(d) || d.path; if (!formatted2) return; paths.splice(paths.findIndex(v => v.startsWith(formatted2)), paths.filter(v => v.startsWith(formatted2)).length); DEL.add(formatted2); DEL.add(formatFileName(d)); w = W.filter(v => v.category === d.id); constructTree(); constructCategoriesList(); updateAD(); updateFD();">Delete</li>
     </ul></div>
     <div id="hierarchy-context-menu" class="ctx-menu hidden"><ul>
         <li onclick="FT.innerHTML = ''; FT.classList.add('phtxt'); FN.value = ''; FC.value = ''; showFolderMenu();">New Folder</li>

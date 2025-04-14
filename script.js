@@ -315,14 +315,14 @@ async function processCategories(categories) {
 
 // this function won't work if there isn't already a commit in the repo
 async function commitToGitHub(files, token) {
-    if (Object.keys(files).filter(v => !DEL.has(v)).length + [...DEL].filter(v => !files.includes(v)).length === 0) {
+    if (Object.keys(files).filter(v => !DEL.has(v)).length + [...DEL].filter(v => !Object.keys(files).includes(v)).length === 0) {
         DEL.clear();
         console.warn("Commit is empty; aborting");
         return; // don't create empty commits
     }
     const repo = 'alfuwu/Hyleus';
     const blobs = [];
-    paths = await (await fetch(`https://alfuwu.github.io/Hyleus/data/files.json`, {
+    const paths = await (await fetch(`https://alfuwu.github.io/Hyleus/data/files.json`, {
         method: 'GET'
     })).json();
     for (const path of DEL)
@@ -473,7 +473,13 @@ async function loadFold() {
 
 async function loadCat(cat) {
     let prev = "";
+    console.log(cat);
+    let parentId = null;
     for (const dir of cat) {
+        currentFolder = Q.find(v => v.name === dir && v.parent === parentId);
+        parentId = currentFolder?.id;
+        if (currentFolder?.temp) // don't attempt to load folders that were created in session
+            return;
         prev += dir + "/";
         const existing = Q.find(v => v.name === dir && (v.path === prev));
         const decoded = !existing || !existing.id ? await decodeDir(prev + "category.info") : null;
@@ -490,10 +496,11 @@ async function loadCat(cat) {
 }
 
 async function loadDat(dat) {
-    if (dat.path) {
+    if (dat.path && !dat.temp) {
         const decoded = await decodeFile(dat.path);
+        console.log(dat.path);
         if (dat.path.includes("/"))
-            await loadCat(dat.path.split("/").slice(0, -1));
+            loadCat(dat.path.split("/").slice(0, -1));
         delete dat.path;
         Object.assign(dat, {
             ...decoded
@@ -522,7 +529,7 @@ function createTreeItem(text, dat, children = null) {
     obj.appendChild(ico);
     obj.appendChild(wrapper);
     if (children) {
-        const existing = Q.find(v => formatFileName(v) === dat.path);
+        const existing = Q.find(v => formatFileName(v) === dat.path || v.path === dat.path);
         if (existing)
             dat = existing;
         else
@@ -533,8 +540,12 @@ function createTreeItem(text, dat, children = null) {
         });
         obj.addEventListener("contextmenu", async event => { if (a) { d = dat; showContextMenu(HFR, event); await loadFold() } });
     } else {
+        const existing = W.find(v => formatFileName(v) === dat.path || v.path === dat.path);
+        if (existing)
+            dat = existing;
+        else
+            W.push(dat);
         dat.obj = obj;
-        W.push(dat);
         obj.addEventListener("click", async event => {
             if (event.button === 0) {
                 if (c)
@@ -593,7 +604,6 @@ function buildPathTree(paths) {
             }
         }
     }
-    W = [];
     return root;
 }
 
@@ -610,7 +620,6 @@ function constructTree() {
             T.appendChild(item);
         }
     }
-    Q = [];
 }
 
 function constructCategoriesList() {
@@ -693,14 +702,15 @@ async function anonymous2() {
     }
 }
 
-function anonymous3() {
+async function anonymous3() {
     if (FN.value) {
         const folder = {
             id: generateUuid(),
             name: FN.value,
-            parent: findFolderByPath(FC.value)?.id || null,
+            parent: (await findFolderByPath(FC.value))?.id || null,
             description: FT.innerText,
-            position: 1
+            position: 1,
+            temp: true
         }
         const existing = findExistingFold();
         if (existing !== -1)
@@ -900,6 +910,8 @@ function formatFileName(file, ret = "") {
 }
 
 async function findFolderByPath(path) {
+    if (!path)
+        return null;
     const segments = path.split("/");
     await loadCat(segments);
     let parentId = null;
@@ -911,7 +923,6 @@ async function findFolderByPath(path) {
             return null;
         parentId = currentFolder.id;
     }
-  
     return currentFolder;
 }
 
@@ -990,17 +1001,18 @@ F.addEventListener("click", event => { if (event.button === 0) closeMenus() });
 UP.addEventListener("input", () => AP.disabled = UP.checked);
 AN.addEventListener("input", () => { AN.value = AN.value.replaceAll("/", ""); updateAD() });
 AC.addEventListener("input", () => updateAD());
-AD.addEventListener("click", event => {
+AD.addEventListener("click", async event => {
     if (event.button === 0 && AN.value) {
         const file = {
             title: AN.value,
-            category: findFolderByPath(AC.value)?.id || null,
+            category: (await findFolderByPath(AC.value))?.id || null,
             type: 0,
             content: AT.innerText,
             password: UP.checked ? guh : AP.value || null,
             salt: undefined, key: undefined, iv: undefined,
             encrypted: false,
-            position: 1
+            position: 1,
+            temp: true
         };
         const existing = findExisting();
         if (existing !== -1)
@@ -1009,7 +1021,7 @@ AD.addEventListener("click", event => {
             W.push(file);
         const fileName = formatFileName(file);
         X.add(fileName);
-        paths.push(fileName);
+        paths.push(fileName + ".hyl");
         showContent(c ? B : N);
         AN.value = "";
         AC.value = "";
