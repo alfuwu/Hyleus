@@ -457,8 +457,11 @@ code {
 .drop-shadow img.inv {
   filter: invert(90%) drop-shadow(0 1em 2em #000);
 }
+#nas img {
+  transition: filter 600ms ease-in-out;
+}
 #nas img:hover {
-  filter: drop-shadow(0 0 0.5em #00ff69) drop-shadow(0 1em 2em #000);
+  filter: drop-shadow(0 1em 2em #000) drop-shadow(0 0.2em 5em #ffa60033) drop-shadow(0 0 20em #ffa60044);
 }
 #article, #create-form {
   overflow-y: auto;

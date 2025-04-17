@@ -63,6 +63,8 @@ const CONTENTS = [N, B, I, D];
 const NAV_BUTTONS = [AR, /*BT,*/ MP];
 const CONTEXT_MENUS = [HC, HFE, HFR];
 
+const OPEN_FOLDERS = [];
+
 const MARQUEE = new ResizeObserver(entries => {
     for (let entry of entries) {
         if (entry.target.scrollWidth > entry.contentRect.width) {
@@ -315,7 +317,7 @@ async function processCategories(categories) {
 
 // this function won't work if there isn't already a commit in the repo
 async function commitToGitHub(files, token) {
-    if (Object.keys(files).filter(v => !DEL.has(v)).length + [...DEL].filter(v => !Object.keys(files).includes(v)).length === 0) {
+    if (Object.values(files).filter(v => !DEL.has(v)).length + [...DEL].filter(v => !Object.values(files).includes(v)).length === 0) {
         DEL.clear();
         console.warn("Commit is empty; aborting");
         return; // don't create empty commits
@@ -507,6 +509,24 @@ async function loadDat(dat) {
     }
 }
 
+function openFolder(folder) {
+    let path = "";
+    for (const fold of folder) {
+        path += fold + "/";
+        const q = Q.find(v => v.path ? v.path === path : formatFileName(v) === path);
+        console.log(path, q);
+        if (q && q.obj)
+            q.obj.click();
+    }
+}
+
+function openFile(file) {
+    if (file.path)
+        openFolder(file.path.split("/").slice(0, -1))
+    else if (file.category)
+        openFolder(formatFileName(Q.find(v => v.id === file.category)).slice(0, -1).split("/"));
+}
+
 function createTreeItem(text, dat, children = null) {
     const obj = document.createElement("button");
     obj.classList.add("hflex", "left", "fold");
@@ -527,21 +547,31 @@ function createTreeItem(text, dat, children = null) {
     obj.appendChild(ico);
     obj.appendChild(wrapper);
     if (children) {
-        const existing = Q.find(v => formatFileName(v) === dat.path || v.path === dat.path);
-        if (existing)
+        const existing = Q.find(v => v.path ? v.path === dat.path : dat.path ? formatFileName(v) === dat.path.slice(0, -13) : formatFileName(v) === formatFileName(dat));
+        if (existing) {
             dat = existing;
-        else
+            if (dat.obj && dat.obj !== obj)
+                dat.obj.remove();
+        } else
             Q.push(dat);
+        dat.obj = obj;
         obj.addEventListener("click", event => {
-            if (event.button === 0)
+            if (event.button === 0) {
                 children.classList.toggle("hidden");
+                if (children.classList.contains("hidden"))
+                    OPEN_FOLDERS.splice(OPEN_FOLDERS.indexOf(dat), 1);
+                else if (OPEN_FOLDERS.indexOf(dat) === -1)
+                    OPEN_FOLDERS.push(dat);
+            }
         });
         obj.addEventListener("contextmenu", async event => { if (a) { d = dat; showContextMenu(HFR, event); await loadFold() } });
     } else {
-        const existing = W.find(v => formatFileName(v) === dat.path || v.path === dat.path);
-        if (existing)
+        const existing = W.find(v => dat.path ? formatFileName(v) === dat.path.slice(0, -4) || v.path === dat.path : formatFileName(v) === formatFileName(dat));
+        if (existing) {
             dat = existing;
-        else
+            if (dat.obj && dat.obj !== obj)
+                dat.obj.remove();
+        } else
             W.push(dat);
         dat.obj = obj;
         obj.addEventListener("click", async event => {
@@ -570,7 +600,7 @@ function handleTreeFromPath(name, subtree, path = "") {
     const children = document.createElement("div");
     children.classList.add("big", "padl", "hidden");
 
-    for (const [key, value] of subtree.files.sort((k, v) => k[1].files && !v[1].files ? -1 : !k.files && v.files ? 1 : 0)) {
+    for (const [key, value] of subtree.files.sort((k, v) => k[1].files && !v[1].files ? -1 : !k[1].files && v[1].files ? 1 : k[0].localeCompare(v[0]))) {
         const item = handleTreeFromPath(key, value, path + name + "/");
         if (item instanceof Array) {
             children.appendChild(item[0]);
@@ -593,7 +623,7 @@ function buildPathTree(paths) {
             const part = parts[i];
             if (i === parts.length - 1) {
                 if (path.endsWith(".hyl")) {
-                    const existing = W.find(v => v.title === path.split("/").pop().slice(0, -4) && formatFileName(Q.find(q => q.id === v.category)).slice(0, -1) === path.split("/").slice(0, -1).join("/"));
+                    const existing = W.find(v => formatFileName(v) === path.slice(0, -4));
                     current.files.push([part, existing || { path }]);
                 }
             } else {
@@ -618,6 +648,8 @@ function constructTree() {
             T.appendChild(item);
         }
     }
+    for (const folder of OPEN_FOLDERS)
+        openFolder((folder.path ? folder.path : formatFileName(folder)).slice(0, -1).split("/"));
 }
 
 function constructCategoriesList() {
@@ -817,7 +849,7 @@ function permParse(text) {
             const fileName = path.split("/").pop();
             const key = fileName.slice(0, -4);
             const dir = path.split("/").slice(0, -1).join("/");
-            const replacement = `<a class="ref" onclick="if (c === null || c.title !== '${key}' && formatFileName(Q.find(q => q.id === c.category)) !== '${dir}/') W.find(v => v.title === '${key}' && formatFileName(Q.find(q => q.id === v.category)) === '${dir}/' || v.path && v.path.split('/').pop() === '${fileName}').obj.click();" data-text="${key}">${key}</a>`;
+            const replacement = `<a class="ref" onclick="if (c === null || c.title !== '${key}' || formatFileName(Q.find(q => q.id === c.category)) !== '${dir}/') file = W.find(v => v.title === '${key}' && formatFileName(Q.find(q => q.id === v.category)) === '${dir}/' || v.path && v.path.split('/').pop() === '${fileName}'); if (file) { file.obj.click(); openFile(file); }" data-text="${key}">${key}</a>`;
             refMap[key] = replacement;
         }
     });
