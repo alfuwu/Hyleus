@@ -473,7 +473,6 @@ async function loadFold() {
 
 async function loadCat(cat) {
     let prev = "";
-    console.log(cat);
     let parentId = null;
     for (const dir of cat) {
         currentFolder = Q.find(v => v.name === dir && v.parent === parentId);
@@ -498,7 +497,6 @@ async function loadCat(cat) {
 async function loadDat(dat) {
     if (dat.path && !dat.temp) {
         const decoded = await decodeFile(dat.path);
-        console.log(dat.path);
         if (dat.path.includes("/"))
             loadCat(dat.path.split("/").slice(0, -1));
         delete dat.path;
@@ -566,14 +564,14 @@ function createTreeItem(text, dat, children = null) {
 }
 
 function handleTreeFromPath(name, subtree, path = "") {
-    if (subtree.path || subtree.title)
+    if (!Object.keys(subtree).includes("files"))
         return createTreeItem(name.slice(0, -4), subtree);
 
     const children = document.createElement("div");
     children.classList.add("big", "padl", "hidden");
 
-    for (const key of Object.keys(subtree).sort()) {
-        const item = handleTreeFromPath(key, subtree[key], path + name + "/");
+    for (const [key, value] of subtree.files.sort((k, v) => k[1].files && !v[1].files ? -1 : !k.files && v.files ? 1 : 0)) {
+        const item = handleTreeFromPath(key, value, path + name + "/");
         if (item instanceof Array) {
             children.appendChild(item[0]);
             children.appendChild(item[1]);
@@ -587,7 +585,7 @@ function handleTreeFromPath(name, subtree, path = "") {
 }
 
 function buildPathTree(paths) {
-    const root = {};
+    const root = { files: [] };
     for (const path of paths) {
         const parts = path.split("/");
         let current = root;
@@ -596,11 +594,11 @@ function buildPathTree(paths) {
             if (i === parts.length - 1) {
                 if (path.endsWith(".hyl")) {
                     const existing = W.find(v => v.title === path.split("/").pop().slice(0, -4) && formatFileName(Q.find(q => q.id === v.category)).slice(0, -1) === path.split("/").slice(0, -1).join("/"));
-                    current[part] = existing || { path };
+                    current.files.push([part, existing || { path }]);
                 }
             } else {
-                if (!current[part]) current[part] = {};
-                current = current[part];
+                if (!current.files.find(k => k[0] === part)) current.files.push([part, { files: [] }]);
+                current = current.files.find(k => k[0] === part)[1];
             }
         }
     }
@@ -611,7 +609,7 @@ function constructTree() {
     const pathTree = buildPathTree(paths);
 
     T.innerHTML = ``;
-    for (const [name, subtree] of Object.entries(pathTree)) {
+    for (const [name, subtree] of pathTree.files) {
         const item = handleTreeFromPath(name, subtree);
         if (item instanceof Array) {
             T.appendChild(item[0]);
