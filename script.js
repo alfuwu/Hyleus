@@ -514,7 +514,6 @@ function openFolder(folder) {
     for (const fold of folder) {
         path += fold + "/";
         const q = Q.find(v => v.path ? v.path === path : formatFileName(v) === path);
-        console.log(path, q);
         if (q && q.obj)
             q.obj.click();
     }
@@ -649,7 +648,8 @@ function constructTree() {
         }
     }
     for (const folder of OPEN_FOLDERS)
-        openFolder((folder.path ? folder.path : formatFileName(folder)).slice(0, -1).split("/"));
+        if (folder.obj) //openFolder((folder.path ? folder.path : formatFileName(folder)).slice(0, -1).split("/"));
+            folder.obj.click();
 }
 
 function constructCategoriesList() {
