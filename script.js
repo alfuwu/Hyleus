@@ -460,6 +460,8 @@ function loadFile() {
 }
 
 async function loadFold() {
+    if (d?.temp)
+        return;
     const existing = Q.find(v => v.name === d.name && v.path === d.path);
     const decoded = !existing || !existing.id ? await decodeDir(d.path + "category.info") : null;
     if (decoded) {
@@ -514,7 +516,7 @@ function openFolder(folder) {
     for (const fold of folder) {
         path += fold + "/";
         const q = Q.find(v => v.path ? v.path === path : formatFileName(v) === path);
-        if (q && q.obj)
+        if (q && q.obj && q.obj.nextSibling.classList.contains("hidden"))
             q.obj.click();
     }
 }
@@ -546,6 +548,7 @@ function createTreeItem(text, dat, children = null) {
     obj.appendChild(ico);
     obj.appendChild(wrapper);
     if (children) {
+        // bug: not finding temp folders(?)
         const existing = Q.find(v => v.path ? v.path === dat.path : dat.path ? formatFileName(v) === dat.path.slice(0, -13) : formatFileName(v) === formatFileName(dat));
         if (existing) {
             dat = existing;
@@ -654,7 +657,7 @@ function constructTree() {
 
 function constructCategoriesList() {
     CA.innerHTML = ``;
-    for (const child of paths) {
+    for (const child of paths.sort((k, v) => k.localeCompare(v))) {
         if (child.endsWith("/category.info")) {
             const opt = document.createElement("option");
             opt.value = child.slice(0, -14);
@@ -757,6 +760,11 @@ async function anonymous3() {
     }
 }
 
+/* Bugs list:
+ - Deleting chunks of text sometimes doesn't delete a part of the text towards the end of the selected section
+ - Pasting text into the start of the editor causes two newlines to be inserted at the start
+ - Pasting text anywhere not at the end of the editor with content already present causes an extra newline to be added before the pasted text block, and no newline to be added after the pasted text block (sometimes)
+ */
 function parse(text) {
     let md = text
         .replace(/</gm, "&lt;")
